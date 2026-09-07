@@ -50,14 +50,20 @@ function runInWindow(dom, relPath) {
   vm.runInContext(code, dom.getInternalVMContext());
 }
 
+function loadHtmlToMd(dom) {
+  runInWindow(dom, "vendor/turndown/turndown.js");
+  runInWindow(dom, "src/lib/html-to-md.js");
+}
+
 function loadFixture(name, url) {
   const html = fs.readFileSync(path.join(ROOT, "testdata", name), "utf8");
   return createDom(html, url);
 }
 
 function runAdapter(dom, adapterFile, withBatch) {
-  runInWindow(dom, "src/lib/html-to-md.js");
+  loadHtmlToMd(dom);
   runInWindow(dom, "src/lib/extract.js");
+  runInWindow(dom, "src/lib/observe.js");
   runInWindow(dom, "src/lib/export.js");
   if (withBatch) runInWindow(dom, "src/lib/batch.js");
   dom.window.module = { exports: {} };
@@ -67,7 +73,7 @@ function runAdapter(dom, adapterFile, withBatch) {
 
 test("htmlToMarkdown preserves headings and code", () => {
   const dom = createDom("<body><h1>Title</h1></body>");
-  runInWindow(dom, "src/lib/html-to-md.js");
+  loadHtmlToMd(dom);
   const md = dom.window.MdToDocxHtml.htmlToMarkdown(
     "<h2>Hi</h2><pre><code class=\"language-js\">x</code></pre>"
   );
@@ -77,7 +83,7 @@ test("htmlToMarkdown preserves headings and code", () => {
 
 test("turnsToMarkdown formats user and assistant", () => {
   const dom = createDom("<body></body>");
-  runInWindow(dom, "src/lib/html-to-md.js");
+  loadHtmlToMd(dom);
   runInWindow(dom, "src/lib/extract.js");
   const md = dom.window.MdToDocxExtract.turnsToMarkdown(
     [
@@ -138,7 +144,7 @@ test("extractPageMarkdown prefers article", () => {
       "word ".repeat(40) +
       "</p></article><footer>f</footer></body>"
   );
-  runInWindow(dom, "src/lib/html-to-md.js");
+  loadHtmlToMd(dom);
   runInWindow(dom, "src/lib/extract.js");
   const md = dom.window.MdToDocxExtract.extractPageMarkdown(dom.window.document);
   assert.match(md, /# A|# A|A/);
@@ -147,7 +153,7 @@ test("extractPageMarkdown prefers article", () => {
 
 test("export labels switch with probe cache helper", async () => {
   const dom = createDom("<body></body>");
-  runInWindow(dom, "src/lib/html-to-md.js");
+  loadHtmlToMd(dom);
   runInWindow(dom, "src/lib/extract.js");
   let fetchCalls = 0;
   dom.window.fetch = async () => {
@@ -164,7 +170,7 @@ test("export labels switch with probe cache helper", async () => {
 
 test("htmlToMarkdown strips script content from flow", () => {
   const dom = createDom("<body></body>");
-  runInWindow(dom, "src/lib/html-to-md.js");
+  loadHtmlToMd(dom);
   const md = dom.window.MdToDocxHtml.htmlToMarkdown(
     "<p>Hello</p><script>alert(1)</script>"
   );
@@ -174,7 +180,7 @@ test("htmlToMarkdown strips script content from flow", () => {
 
 test("htmlToMarkdown adds blank lines between div blocks", () => {
   const dom = createDom("<body></body>");
-  runInWindow(dom, "src/lib/html-to-md.js");
+  loadHtmlToMd(dom);
   const md = dom.window.MdToDocxHtml.htmlToMarkdown(
     "<div>First paragraph text here</div><div>Second paragraph text here</div>"
   );
@@ -183,7 +189,7 @@ test("htmlToMarkdown adds blank lines between div blocks", () => {
 
 test("beautifyMarkdown collapses excess blank lines", () => {
   const dom = createDom("<body></body>");
-  runInWindow(dom, "src/lib/html-to-md.js");
+  loadHtmlToMd(dom);
   const md = dom.window.MdToDocxHtml.beautifyMarkdown("A\n\n\n\nB\n## Title\nC");
   assert.doesNotMatch(md, /\n{3,}/);
   assert.match(md, /## Title/);
@@ -191,7 +197,7 @@ test("beautifyMarkdown collapses excess blank lines", () => {
 
 test("showFloating defaults to true", () => {
   const dom = createDom("<body></body>");
-  runInWindow(dom, "src/lib/html-to-md.js");
+  loadHtmlToMd(dom);
   runInWindow(dom, "src/lib/extract.js");
   runInWindow(dom, "src/lib/export.js");
   assert.equal(dom.window.MdToDocxExport.DEFAULTS.showFloating, true);
@@ -203,7 +209,7 @@ test("extractPageMarkdown strips nav from clone", () => {
       "word ".repeat(30) +
       "</div></article></body>"
   );
-  runInWindow(dom, "src/lib/html-to-md.js");
+  loadHtmlToMd(dom);
   runInWindow(dom, "src/lib/extract.js");
   const md = dom.window.MdToDocxExtract.extractPageMarkdown(dom.window.document);
   assert.match(md, /Title/);
@@ -214,8 +220,9 @@ test("floating button remounts after SPA removes it", async () => {
   const dom = createDom("<body><div id='app'>content</div></body>", "https://example.com", {
     realMutationObserver: true,
   });
-  runInWindow(dom, "src/lib/html-to-md.js");
+  loadHtmlToMd(dom);
   runInWindow(dom, "src/lib/extract.js");
+  runInWindow(dom, "src/lib/observe.js");
   runInWindow(dom, "src/lib/export.js");
 
   dom.window.MdToDocxExport.injectFloatingButton(() => {});
@@ -228,7 +235,7 @@ test("floating button remounts after SPA removes it", async () => {
   float.remove();
   assert.equal(dom.window.document.querySelector(".md-to-docx-float"), null);
 
-  await new Promise((r) => setTimeout(r, 150));
+  await new Promise((r) => setTimeout(r, 250));
 
   float = dom.window.document.querySelector(".md-to-docx-float");
   assert.ok(float, "float should remount after SPA remove");
@@ -236,10 +243,62 @@ test("floating button remounts after SPA removes it", async () => {
   assert.ok(dom.window.document.body.contains(float));
 });
 
+test("observe runQuiet does not fire mutate callback", async () => {
+  const dom = createDom("<body><div id='host'></div></body>", "https://example.com", {
+    realMutationObserver: true,
+  });
+  runInWindow(dom, "src/lib/observe.js");
+  let calls = 0;
+  const host = dom.window.document.getElementById("host");
+  const obs = dom.window.MdToDocxObserve.watch(
+    host,
+    () => {
+      calls += 1;
+    },
+    { debounceMs: 50 }
+  );
+  obs.runQuiet(() => {
+    const el = dom.window.document.createElement("div");
+    el.textContent = "quiet";
+    host.appendChild(el);
+  });
+  await new Promise((r) => setTimeout(r, 150));
+  assert.equal(calls, 0);
+  obs.disconnect();
+});
+
+test("observe ignores extension-only add mutations", () => {
+  const dom = createDom("<body></body>");
+  runInWindow(dom, "src/lib/observe.js");
+  const own = dom.window.document.createElement("div");
+  own.className = "md-to-docx-export-btn";
+  const foreign = dom.window.document.createElement("div");
+  foreign.className = "app-root";
+  assert.equal(
+    dom.window.MdToDocxObserve.shouldIgnoreMutations([
+      { addedNodes: [own], removedNodes: [] },
+    ]),
+    true
+  );
+  assert.equal(
+    dom.window.MdToDocxObserve.shouldIgnoreMutations([
+      { addedNodes: [], removedNodes: [own] },
+    ]),
+    false
+  );
+  assert.equal(
+    dom.window.MdToDocxObserve.shouldIgnoreMutations([
+      { addedNodes: [foreign], removedNodes: [] },
+    ]),
+    false
+  );
+});
+
 test("injectFloatingButton builds close icon without innerHTML", async () => {
   const dom = createDom("<body></body>");
-  runInWindow(dom, "src/lib/html-to-md.js");
+  loadHtmlToMd(dom);
   runInWindow(dom, "src/lib/extract.js");
+  runInWindow(dom, "src/lib/observe.js");
   runInWindow(dom, "src/lib/export.js");
 
   dom.window.MdToDocxExport.injectFloatingButton(() => {});
@@ -254,7 +313,7 @@ test("injectFloatingButton builds close icon without innerHTML", async () => {
 
 test("getSettings degrades when extension context is dead", async () => {
   const dom = createDom("<body></body>");
-  runInWindow(dom, "src/lib/html-to-md.js");
+  loadHtmlToMd(dom);
   runInWindow(dom, "src/lib/extract.js");
   // No chrome.runtime.id → isExtensionAlive false
   dom.window.chrome = {
@@ -280,4 +339,82 @@ test("getSettings degrades when extension context is dead", async () => {
   const settings = await dom.window.MdToDocxExport.getSettings();
   assert.equal(settings.endpoint, "http://127.0.0.1:8080");
   assert.equal(settings.fallbackMd, true);
+});
+
+test("batch select panel lists sidebar chats and updates count", () => {
+  const dom = loadFixture("chatgpt-sample.html", "https://chatgpt.com/");
+  loadHtmlToMd(dom);
+  runInWindow(dom, "src/lib/extract.js");
+  runInWindow(dom, "src/lib/observe.js");
+  runInWindow(dom, "src/lib/export.js");
+  runInWindow(dom, "src/lib/batch.js");
+  dom.window.module = { exports: {} };
+  runInWindow(dom, "src/content/chatgpt.js");
+  const adapter = dom.window.module.exports;
+
+  const api = dom.window.MdToDocxBatch.setupBatchExport({
+    listSidebarConversations: adapter.listSidebarConversations,
+    openConversation: async () => {},
+    extractConversationMarkdown: adapter.extractConversationMarkdown,
+    isConversationReady: () => true,
+  });
+
+  assert.ok(dom.window.document.querySelector(".md-to-docx-batch-float"));
+  assert.ok(dom.window.document.querySelector(".md-to-docx-batch-launcher"));
+  assert.match(
+    dom.window.document.querySelector(".md-to-docx-batch-hint").textContent,
+    /Select chats/
+  );
+
+  const launcher = dom.window.document.querySelector(".md-to-docx-batch-launcher");
+  assert.match(launcher.title, /drag to move/);
+  launcher.click();
+  assert.ok(
+    dom.window.document
+      .querySelector(".md-to-docx-batch-float")
+      .classList.contains("md-to-docx-batch-float-open")
+  );
+
+  api.openPanel();
+  const panel = dom.window.document.querySelector(".md-to-docx-batch-panel");
+  assert.ok(panel);
+  assert.equal(panel.hidden, false);
+
+  const rows = panel.querySelectorAll(".md-to-docx-batch-row");
+  assert.equal(rows.length, 2);
+  assert.match(rows[0].textContent, /Alpha chat/);
+  assert.match(rows[1].textContent, /Beta chat/);
+
+  const cb = rows[0].querySelector("input[type=checkbox]");
+  cb.checked = true;
+  cb.dispatchEvent(new dom.window.Event("change", { bubbles: true }));
+
+  assert.equal(api.getSelected().length, 1);
+  assert.equal(
+    dom.window.document.querySelector(".md-to-docx-batch-count").textContent,
+    "1"
+  );
+  assert.equal(
+    dom.window.document.querySelector(".md-to-docx-batch-export").disabled,
+    false
+  );
+  const pill = dom.window.document.querySelector(".md-to-docx-batch-count-pill");
+  assert.equal(pill.hidden, false);
+  assert.equal(pill.textContent, "1");
+});
+
+test("gemini adapter interleaves user and assistant turns", () => {
+  const dom = loadFixture("gemini-sample.html", "https://gemini.google.com/");
+  const exports = runAdapter(dom, "gemini.js", false);
+  const data = exports.extractConversationMarkdown(dom.window.document);
+  assert.ok(data);
+  const md = data.markdown;
+  const userIdx1 = md.indexOf("First question");
+  const asstIdx1 = md.indexOf("First answer");
+  const userIdx2 = md.indexOf("Second question");
+  const asstIdx2 = md.indexOf("Second answer");
+  assert.ok(userIdx1 >= 0 && asstIdx1 > userIdx1);
+  assert.ok(userIdx2 > asstIdx1 && asstIdx2 > userIdx2);
+  // Must not dump all users before all assistants
+  assert.ok(asstIdx1 < userIdx2);
 });

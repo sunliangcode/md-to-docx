@@ -39,6 +39,13 @@
           turns.push({ role: "assistant", el });
         }
       });
+      turns.sort((a, b) => {
+        if (a.el === b.el) return 0;
+        const pos = a.el.compareDocumentPosition(b.el);
+        if (pos & Node.DOCUMENT_POSITION_FOLLOWING) return -1;
+        if (pos & Node.DOCUMENT_POSITION_PRECEDING) return 1;
+        return 0;
+      });
     }
 
     return turns;
@@ -139,9 +146,10 @@
   }
 
   function setup() {
-    const observer = new MutationObserver(() => attachButtons());
-    observer.observe(document.body, { childList: true, subtree: true });
-    attachButtons();
+    const obs = MdToDocxObserve.watch(document.body, () => {
+      obs.runQuiet(() => attachButtons());
+    });
+    obs.runQuiet(() => attachButtons());
     MdToDocxExport.injectFloatingButton(() => {
       const data = extractConversationMarkdown(document);
       if (!data || !data.markdown.trim()) {

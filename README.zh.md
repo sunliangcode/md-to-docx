@@ -162,32 +162,33 @@ md-to-docx ./docs --dry-run
 
 ## 选择使用方式
 
-| 入口 | 一句话 | 文档 |
-|------|--------|------|
-| CLI | 完整命令行工具（`md-to-docx`） | [命令手册](references/cli.zh.md) |
-| `bin/convert` | clone 后无需 `pip install` 即可运行 | — |
-| Python API | 脚本调用 `from md_to_docx.api import convert` | [development.md](references/development.md) |
-| Cursor Skill | Agent 自动选 preset 并转换 | [SKILL.md](SKILL.md) |
-| Claude / Codex / Gemini | 各平台 Skill 副本 | [skills/](skills/) |
-| MCP | 四个工具：convert、validate、apply_template、list_presets | [mcp.md](references/mcp.md) |
-| Web Playground | 浏览器编辑并下载 DOCX（Docker） | [web/README.md](web/README.md) |
-| 浏览器扩展 | 从 ChatGPT / Claude / Gemini 对话导出 Word | [browser-extension/README.md](browser-extension/README.md) |
-| VS Code | 命令 `MD: Export to DOCX`，Markdown 右键菜单 | [editors/vscode/README.md](editors/vscode/README.md) |
-| Obsidian | `Export to Professional Word`（仅桌面端） | [editors/obsidian/README.md](editors/obsidian/README.md) |
-| Finder / 资源管理器 | 一键安装系统右键菜单（`.md` / `.docx`） | [desktop/README.zh.md](desktop/README.zh.md) |
-| GitHub Action | CI 从 Markdown 构建 DOCX | [action/README.md](action/README.md) |
+| 入口 | 状态 | 一句话 | 文档 |
+|------|------|--------|------|
+| CLI | **核心** | 完整命令行工具（`md-to-docx`） | [命令手册](references/cli.zh.md) |
+| `bin/convert` | **核心** | clone 后无需 `pip install` 即可运行 | — |
+| Python API | **核心** | 脚本调用 `from md_to_docx.api import convert` | [development.md](references/development.md) |
+| Cursor Skill | **核心** | Agent 自动选 preset 并转换 | [SKILL.md](SKILL.md) |
+| Claude / Codex / Gemini | **核心** | 各平台 Skill 副本 | [skills/](skills/) |
+| MCP | **核心** | 四个工具：convert、validate、apply_template、list_presets | [mcp.md](references/mcp.md) |
+| Web Playground | **核心** | 浏览器编辑并下载 DOCX（Docker） | [web/README.md](web/README.md) |
+| GitHub Action | **核心** | CI 从 Markdown 构建 DOCX | [action/README.md](action/README.md) |
+| 浏览器扩展 | 实验性 | 从 ChatGPT / Claude / Gemini 导出（需本地 Playground） | [browser-extension/README.md](browser-extension/README.md) |
+| VS Code | 实验性 | 本地 VSIX / 开发宿主 — 未上架 Marketplace | [editors/vscode/README.md](editors/vscode/README.md) |
+| Obsidian | 实验性 | 手动安装 — 尚无设置界面 | [editors/obsidian/README.md](editors/obsidian/README.md) |
+| Finder / 资源管理器 | 实验性 | 一键安装系统右键菜单（`.md` / `.docx`） | [desktop/README.zh.md](desktop/README.zh.md) |
 
 ## 文档格式支持
 
 - **Native AST 引擎** — Document AST → 专业 DOCX
-- **结构** — 标题、列表、表格、代码、引用、图片、脚注、任务列表
+- **结构** — 标题、列表、表格、代码、引用、图片、任务列表
+- **脚注** — Markdown `[^id]` 渲染为上标数字 + 文末 **Notes** 节（尚非 Word `footnotes.xml`）
 - **CJK** — 微软雅黑 / 宋体模板
 - **Mermaid** — 安装 `mmdc` 时输出 PNG；否则降级为代码块
-- **数学公式** — 基础 LaTeX → OMML
-- **题注与交叉引用** — `{#fig:id}`、`[@fig:id]`、表格题注
+- **数学公式** — 基础 LaTeX → OMML（子集；复杂 MathML 降级为纯文本）
+- **题注与交叉引用** — `{#fig:id}`、`[@fig:id]`、`Table: … {#tbl:id}`
 - **目录与页码** — Word 原生域、页眉页脚
 - **分页符** — Markdown 中 `<!-- pagebreak -->`
-- **Frontmatter** — YAML 元数据（title、author、date 等）
+- **Frontmatter** — YAML 元数据（`title`、`author`、`date`、`toc` 等）；preset/template 仍需 CLI 参数
 
 详见 [预设](references/presets.md)、[往返转换](references/roundtrip.md)、[插件](references/plugins.md)。
 

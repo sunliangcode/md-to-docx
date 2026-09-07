@@ -60,12 +60,18 @@ def _inline_text(children: tuple[n.Inline, ...]) -> str:
     for child in children:
         if isinstance(child, n.Text):
             parts.append(child.value)
-        elif isinstance(child, (n.Strong, n.Emphasis, n.Strike, n.Code)):
+        elif isinstance(child, n.Code):
+            parts.append(child.value)
+        elif isinstance(child, (n.Strong, n.Emphasis, n.Strike, n.Link)):
             parts.append(_inline_text(child.children))
         elif isinstance(child, n.SoftBreak):
             parts.append(" ")
         elif isinstance(child, n.Break):
             parts.append("\n")
+        elif isinstance(child, n.CrossRef):
+            parts.append(f"[@{child.kind}:{child.identifier}]")
+        elif isinstance(child, n.FootnoteRef):
+            parts.append(f"[^{child.key}]")
     return "".join(parts).strip()
 
 

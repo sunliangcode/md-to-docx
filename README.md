@@ -162,32 +162,33 @@ md-to-docx ./docs --dry-run
 
 ## Choose how to run it
 
-| Entry | One-liner | Doc |
-|-------|-----------|-----|
-| CLI | Full command-line tool (`md-to-docx`) | [CLI Reference](references/cli.md) |
-| `bin/convert` | Run from a git clone without `pip install` | — |
-| Python API | `from md_to_docx.api import convert` for scripts | [development.md](references/development.md) |
-| Cursor Skill | Agent picks a preset and converts for you | [SKILL.md](SKILL.md) |
-| Claude / Codex / Gemini | Platform-specific skill copies | [skills/](skills/) |
-| MCP | Four tools: convert, validate, apply_template, list_presets | [mcp.md](references/mcp.md) |
-| Web Playground | Edit in browser, download DOCX (Docker) | [web/README.md](web/README.md) |
-| Browser extension | Export ChatGPT / Claude / Gemini chats to Word | [browser-extension/README.md](browser-extension/README.md) |
-| VS Code | Command `MD: Export to DOCX` on Markdown files | [editors/vscode/README.md](editors/vscode/README.md) |
-| Obsidian | `Export to Professional Word` (desktop only) | [editors/obsidian/README.md](editors/obsidian/README.md) |
-| Finder / Explorer | One-click system context menu for `.md` / `.docx` | [desktop/README.md](desktop/README.md) |
-| GitHub Action | CI builds DOCX from Markdown | [action/README.md](action/README.md) |
+| Entry | Status | One-liner | Doc |
+|-------|--------|-----------|-----|
+| CLI | **Core** | Full command-line tool (`md-to-docx`) | [CLI Reference](references/cli.md) |
+| `bin/convert` | **Core** | Run from a git clone without `pip install` | — |
+| Python API | **Core** | `from md_to_docx.api import convert` for scripts | [development.md](references/development.md) |
+| Cursor Skill | **Core** | Agent picks a preset and converts for you | [SKILL.md](SKILL.md) |
+| Claude / Codex / Gemini | **Core** | Platform-specific skill copies | [skills/](skills/) |
+| MCP | **Core** | Four tools: convert, validate, apply_template, list_presets | [mcp.md](references/mcp.md) |
+| Web Playground | **Core** | Edit in browser, download DOCX (Docker) | [web/README.md](web/README.md) |
+| GitHub Action | **Core** | CI builds DOCX from Markdown | [action/README.md](action/README.md) |
+| Browser extension | Experimental | Export ChatGPT / Claude / Gemini chats (needs local Playground) | [browser-extension/README.md](browser-extension/README.md) |
+| VS Code | Experimental | Local VSIX / Extension Development Host — not on Marketplace | [editors/vscode/README.md](editors/vscode/README.md) |
+| Obsidian | Experimental | Manual install — no settings UI yet | [editors/obsidian/README.md](editors/obsidian/README.md) |
+| Finder / Explorer | Experimental | One-click system context menu for `.md` / `.docx` | [desktop/README.md](desktop/README.md) |
 
 ## Document support
 
 - **Native AST engine** — Document AST → professional DOCX
-- **Structure** — headings, lists, tables, code, blockquotes, images, footnotes, task lists
+- **Structure** — headings, lists, tables, code, blockquotes, images, task lists
+- **Footnotes** — Markdown `[^id]` refs render as superscript numbers plus a trailing **Notes** section (not Word `footnotes.xml` yet)
 - **CJK** — Microsoft YaHei / SimSun templates
 - **Mermaid** — PNG when `mmdc` is installed; degrades to code block otherwise
-- **Math** — basic LaTeX → OMML
-- **Captions & cross-refs** — `{#fig:id}`, `[@fig:id]`, table captions
+- **Math** — basic LaTeX → OMML (subset; complex MathML falls back to plain text)
+- **Captions & cross-refs** — `{#fig:id}`, `[@fig:id]`, `Table: … {#tbl:id}`
 - **TOC & page numbers** — Word-native fields, header/footer
 - **Page breaks** — `<!-- pagebreak -->` in Markdown
-- **Frontmatter** — YAML metadata (title, author, date, …)
+- **Frontmatter** — YAML metadata (`title`, `author`, `date`, `toc`, …); CLI flags still required for preset/template
 
 See [presets](references/presets.md), [roundtrip](references/roundtrip.md), [plugins](references/plugins.md).
 

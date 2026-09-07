@@ -5,10 +5,14 @@ Export the current Markdown file to Word using the **md-to-docx** CLI on your ma
 ## Prerequisites
 
 ```bash
-pip install md2docx-compiler
-# or from this repo:
+# From a clone of this repo (package is not on PyPI yet):
 pip install -e /path/to/md-to-docx
+# or:
+pip install "git+https://github.com/sunliang11/md-to-docx.git"
 ```
+
+The PyPI name will be `md2docx-compiler` when published; the CLI command remains `md-to-docx`.
+Until then, install from Git as above.
 
 Ensure `md-to-docx` is on your `PATH`, or set **md-to-docx.path** in VS Code settings.
 

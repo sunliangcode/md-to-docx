@@ -4,6 +4,20 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Fixed
+
+- Inline Markdown (bold / italic / links / code) now parses into the Document AST instead of raw `**…**` text in DOCX
+- Footnote documents no longer crash (`callout_map` NameError); refs render as superscripts + trailing Notes section
+- Figure `{#fig:id}` / `Table: … {#tbl:id}` captions and `[@fig:…]` cross-refs work after normalizer collapses blank lines
+- AST diff no longer crashes on inline `Code` nodes
+- Browser extension: Gemini turn order interleaved; batch export waits for content fingerprint change; host access narrowed (webpage export is opt-in); convert endpoint restricted to loopback
+
+### Changed
+
+- README marks browser extension / VS Code / Obsidian / desktop context menu as experimental vs core surfaces
+- Editor install docs use git/source install (not a published PyPI wheel yet)
+- `SECURITY.md` supported versions updated to 1.x
+
 ### Added
 
 - Web Playground modes: Convert (validate, ODM inserts, community templates, engine HTML preview), Reverse, and Diff

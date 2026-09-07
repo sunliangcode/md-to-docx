@@ -10,14 +10,16 @@
     input[type="url"], select { width: 100%; padding: 8px; font-size: 14px; box-sizing: border-box; }
     button { margin-top: 16px; padding: 8px 16px; }
     p.hint { color: #555; font-size: 13px; }
+    p.error { color: #b91c1c; font-size: 13px; }
   </style>
 </head>
 <body>
   <h1>md-to-docx Export</h1>
-  <p class="hint">Conversion runs on your local Playground — content is sent only to the endpoint below. When Playground is offline, buttons show <strong>Export MD</strong> and download Markdown (if fallback is enabled).</p>
+  <p class="hint">Conversion runs on your local Playground — content is sent only to a <strong>loopback</strong> endpoint below. When Playground is offline, buttons show <strong>Export MD</strong> and download Markdown (if fallback is enabled).</p>
 
-  <label for="endpoint">Convert endpoint URL</label>
+  <label for="endpoint">Convert endpoint URL (localhost only)</label>
   <input id="endpoint" type="url" placeholder="http://127.0.0.1:8080">
+  <p id="endpointError" class="error" hidden></p>
 
   <label for="preset">Default preset</label>
   <select id="preset">
@@ -35,9 +37,15 @@
 
   <label class="row">
     <input type="checkbox" id="showFloating" checked>
-    Show floating export button on pages
+    Show floating export button on AI chat pages
   </label>
   <p class="hint">On by default as a framed circular launcher — click to open the export sheet. Drag to move. Uncheck to remove entirely.</p>
+
+  <label class="row">
+    <input type="checkbox" id="enableWebpageExport">
+    Enable webpage export on all sites (optional)
+  </label>
+  <p class="hint">Off by default. When enabled, Chrome will ask for access to all websites so the floating button can appear outside AI chat hosts.</p>
 
   <button type="button" id="save">Save</button>
   <p id="status"></p>

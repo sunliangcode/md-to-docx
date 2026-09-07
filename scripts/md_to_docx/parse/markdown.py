@@ -43,13 +43,34 @@ def _make_md() -> MarkdownIt:
     return md
 
 
+def _text_with_xrefs(text: str) -> list[n.Inline]:
+    """Split plain text into Text / CrossRef nodes via [@fig|tbl|sec:id]."""
+    if not text:
+        return []
+    parts: list[n.Inline] = []
+    last = 0
+    for match in XREF_RE.finditer(text):
+        if match.start() > last:
+            parts.append(n.Text(text[last : match.start()]))
+        parts.append(n.CrossRef(match.group(1), match.group(2)))  # type: ignore[arg-type]
+        last = match.end()
+    if last < len(text):
+        parts.append(n.Text(text[last:]))
+    return parts
+
+
 def _inline_children(tokens: list[Token], start: int, end: int) -> tuple[n.Inline, ...]:
     children: list[n.Inline] = []
     i = start
     while i < end:
         tok = tokens[i]
-        if tok.type == "text":
-            children.append(n.Text(tok.content))
+        if tok.type == "inline":
+            # markdown-it nests emphasis/links/code under inline.children
+            nested = list(tok.children or [])
+            children.extend(_inline_children(nested, 0, len(nested)))
+            i += 1
+        elif tok.type == "text":
+            children.extend(_text_with_xrefs(tok.content))
             i += 1
         elif tok.type == "code_inline":
             children.append(n.Code(tok.content))
@@ -81,10 +102,11 @@ def _inline_children(tokens: list[Token], start: int, end: int) -> tuple[n.Inlin
             )
             i = close + 1
         elif tok.type == "image":
+            alt = (tok.attrGet("alt") or tok.content or "").strip()
             children.append(
                 n.InlineImage(
                     src=tok.attrGet("src") or "",
-                    alt=tok.content,
+                    alt=alt,
                     title=tok.attrGet("title"),
                 )
             )
@@ -93,26 +115,19 @@ def _inline_children(tokens: list[Token], start: int, end: int) -> tuple[n.Inlin
             children.append(n.MathInline(tok.content))
             i += 1
         elif tok.type == "footnote_ref":
-            children.append(n.FootnoteRef(tok.meta.get("id", tok.content)))
+            key = tok.meta.get("label")
+            if key is None:
+                key = tok.meta.get("id", tok.content)
+            children.append(n.FootnoteRef(str(key)))
             i += 1
         elif tok.type == "html_inline":
-            text = tok.content
-            for match in XREF_RE.finditer(text):
-                children.append(n.CrossRef(match.group(1), match.group(2)))
-                text = text.replace(match.group(0), "")
-            if text.strip():
-                children.append(n.Text(text))
+            children.extend(_text_with_xrefs(tok.content))
+            i += 1
+        elif tok.type in ("footnote_anchor",):
             i += 1
         else:
             if tok.content:
-                for part in XREF_RE.split(tok.content):
-                    if not part:
-                        continue
-                    m = re.fullmatch(r"(fig|tbl|sec):(.+)", part)
-                    if m:
-                        children.append(n.CrossRef(m.group(1), m.group(2)))
-                    else:
-                        children.append(n.Text(part))
+                children.extend(_text_with_xrefs(tok.content))
             i += 1
     return tuple(children)
 
@@ -346,10 +361,12 @@ def _extract_footnotes(tokens: list[Token]) -> tuple[n.FootnoteDef, ...]:
             j = i + 1
             while j < close:
                 if tokens[j].type == "footnote_open":
-                    key = tokens[j].meta.get("id", str(len(footnotes) + 1))
+                    key = tokens[j].meta.get("label")
+                    if key is None:
+                        key = tokens[j].meta.get("id", str(len(footnotes) + 1))
                     fc = _find_close(tokens, j, "footnote_close")
-                    inner = _blocks_from_tokens(tokens[j + 1 : fc], [], callouts=callout_map)
-                    footnotes.append(n.FootnoteDef(key=key, children=inner))
+                    inner = _blocks_from_tokens(tokens[j + 1 : fc], [], callouts={})
+                    footnotes.append(n.FootnoteDef(key=str(key), children=inner))
                     j = fc + 1
                 else:
                     j += 1
@@ -359,20 +376,113 @@ def _extract_footnotes(tokens: list[Token]) -> tuple[n.FootnoteDef, ...]:
     return tuple(footnotes)
 
 
+def _fig_id_from_text(value: str) -> str | None:
+    m = FIG_ID_RE.search(value.strip())
+    if not m:
+        return None
+    return f"{m.group(1)}:{m.group(2)}"
+
+
+def _split_softbreak_segments(
+    children: tuple[n.Inline, ...],
+) -> list[tuple[n.Inline, ...]]:
+    segments: list[list[n.Inline]] = [[]]
+    for child in children:
+        if isinstance(child, n.SoftBreak):
+            segments.append([])
+        else:
+            segments[-1].append(child)
+    return [tuple(seg) for seg in segments if seg]
+
+
+def _image_from_segment(
+    segment: tuple[n.Inline, ...],
+) -> n.Image | None:
+    if not segment or not isinstance(segment[0], n.InlineImage):
+        return None
+    img = segment[0]
+    src, alt, title, identifier = _parse_image_attrs(img.src, img.alt, img.title)
+    rest = segment[1:]
+    if not identifier and len(rest) == 1 and isinstance(rest[0], n.Text):
+        identifier = _fig_id_from_text(rest[0].value)
+        rest = ()
+    if rest:
+        return None
+    return n.Image(src=src, alt=alt, title=title, identifier=identifier)
+
+
+def _table_caption_from_segment(
+    segment: tuple[n.Inline, ...],
+) -> tuple[str, str | None] | None:
+    if len(segment) != 1 or not isinstance(segment[0], n.Text):
+        return None
+    match = TABLE_CAPTION_RE.match(segment[0].value.strip())
+    if not match:
+        return None
+    return match.group(1).strip(), match.group(2)
+
+
 def _split_block_images(blocks: tuple[n.Block, ...]) -> tuple[n.Block, ...]:
+    """Promote images / Table: captions even when normalizer collapsed blank lines."""
     result: list[n.Block] = []
-    for block in blocks:
-        if isinstance(block, n.Paragraph) and len(block.children) == 1:
-            child = block.children[0]
-            if isinstance(child, n.InlineImage):
-                src, alt, title, identifier = _parse_image_attrs(
-                    child.src, child.alt, child.title
-                )
-                result.append(
-                    n.Image(src=src, alt=alt, title=title, identifier=identifier)
-                )
-                continue
+    i = 0
+    while i < len(blocks):
+        block = blocks[i]
+
+        if isinstance(block, n.Paragraph):
+            segments = _split_softbreak_segments(block.children)
+            pending: list[tuple[n.Inline, ...]] = []
+
+            def flush_pending() -> None:
+                nonlocal pending
+                if not pending:
+                    return
+                inlines: list[n.Inline] = []
+                for idx, seg in enumerate(pending):
+                    if idx:
+                        inlines.append(n.SoftBreak())
+                    inlines.extend(seg)
+                result.append(n.Paragraph(tuple(inlines)))
+                pending = []
+
+            for seg_i, segment in enumerate(segments):
+                image = _image_from_segment(segment)
+                if image is not None:
+                    flush_pending()
+                    result.append(image)
+                    continue
+
+                # Table caption as its own softbreak segment immediately before a table
+                is_last = seg_i == len(segments) - 1
+                cap = _table_caption_from_segment(segment) if is_last else None
+                if (
+                    cap is not None
+                    and i + 1 < len(blocks)
+                    and isinstance(blocks[i + 1], n.Table)
+                ):
+                    flush_pending()
+                    caption, tbl_id = cap
+                    table = blocks[i + 1]
+                    identifier = f"tbl:{tbl_id}" if tbl_id else table.identifier
+                    result.append(
+                        n.Table(
+                            rows=table.rows,
+                            identifier=identifier,
+                            caption=caption,
+                        )
+                    )
+                    i += 2
+                    pending = []
+                    break
+
+                pending.append(segment)
+            else:
+                flush_pending()
+                i += 1
+            continue
+
         result.append(block)
+        i += 1
     return tuple(result)
 
 

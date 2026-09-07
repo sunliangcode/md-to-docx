@@ -55,9 +55,10 @@
   }
 
   function setup() {
-    const observer = new MutationObserver(() => attachButtons());
-    observer.observe(document.body, { childList: true, subtree: true });
-    attachButtons();
+    const obs = MdToDocxObserve.watch(document.body, () => {
+      obs.runQuiet(() => attachButtons());
+    });
+    obs.runQuiet(() => attachButtons());
     MdToDocxExport.injectFloatingButton(() => {
       const data = extractConversationMarkdown(document);
       if (!data || !data.markdown.trim()) {

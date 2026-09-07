@@ -156,9 +156,10 @@
   }
 
   function setup() {
-    const observer = new MutationObserver(() => attachButtons());
-    observer.observe(document.body, { childList: true, subtree: true });
-    attachButtons();
+    const obs = MdToDocxObserve.watch(document.body, () => {
+      obs.runQuiet(() => attachButtons());
+    });
+    obs.runQuiet(() => attachButtons());
     // Floating fallback when message toolbar selectors miss.
     MdToDocxExport.injectFloatingButton(() => {
       const data = extractConversationMarkdown(document);

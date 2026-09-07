@@ -11,13 +11,21 @@ from lxml import etree
 
 from md_to_docx.converter import convert_file
 
-NS = {"w": "http://schemas.openxmlformats.org/wordprocessingml/2006/main"}
+NS = {
+    "w": "http://schemas.openxmlformats.org/wordprocessingml/2006/main",
+    "r": "http://schemas.openxmlformats.org/officeDocument/2006/relationships",
+}
 
 
 def _xml(docx: Path, name: str):
     with zipfile.ZipFile(docx) as zf:
         with zf.open(name) as f:
             return etree.parse(f).getroot()
+
+
+def _document_text(docx: Path) -> str:
+    root = _xml(docx, "word/document.xml")
+    return "".join(root.xpath(".//w:t/text()", namespaces=NS))
 
 
 @pytest.fixture
@@ -70,3 +78,39 @@ def _heading_color(docx: Path, style_id: str) -> str | None:
 def test_heading_color_black(native_sample: Path):
     assert _heading_color(native_sample, "Heading1") == "000000"
     assert _heading_color(native_sample, "Heading2") == "000000"
+
+
+def test_sample_has_bold_run_not_raw_markers(native_sample: Path):
+    root = _xml(native_sample, "word/document.xml")
+    text = _document_text(native_sample)
+    assert "bold" in text
+    assert "**bold**" not in text
+    assert "`inline code`" not in text
+    bolds = root.xpath(".//w:r[w:rPr/w:b]/w:t", namespaces=NS)
+    assert any("bold" in (t.text or "") for t in bolds)
+
+
+def test_footnotes_convert(tmp_path: Path):
+    src = Path(__file__).parent / "fixtures" / "footnotes.md"
+    dst = tmp_path / "footnotes.md"
+    shutil.copy(src, dst)
+    out = tmp_path / "footnotes.docx"
+    convert_file(dst, out)
+    text = _document_text(out)
+    assert "footnote reference" in text
+    assert "Notes" in text
+    assert "footnote text" in text
+    assert "**bold**" not in text
+
+
+def test_captions_convert(tmp_path: Path):
+    src = Path(__file__).parent / "fixtures" / "captions.md"
+    dst = tmp_path / "captions.md"
+    shutil.copy(src, dst)
+    out = tmp_path / "captions.docx"
+    convert_file(dst, out)
+    text = _document_text(out)
+    assert "Figure 1" in text or "System architecture" in text
+    assert "API endpoints" in text
+    assert "[@fig:arch]" not in text
+    assert "[@tbl:api]" not in text

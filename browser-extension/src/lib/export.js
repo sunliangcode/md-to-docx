@@ -6,6 +6,27 @@
     showFloating: true,
   };
 
+  function isLoopbackEndpoint(url) {
+    try {
+      const u = new URL(url);
+      if (u.protocol !== "http:" && u.protocol !== "https:") return false;
+      const host = (u.hostname || "").toLowerCase();
+      return (
+        host === "127.0.0.1" ||
+        host === "localhost" ||
+        host === "[::1]" ||
+        host === "::1"
+      );
+    } catch (_) {
+      return false;
+    }
+  }
+
+  function sanitizeEndpoint(url) {
+    const raw = String(url || DEFAULTS.endpoint).replace(/\/$/, "");
+    return isLoopbackEndpoint(raw) ? raw : DEFAULTS.endpoint;
+  }
+
   const LABEL_WORD = "Export to Word";
   const LABEL_MD = "Export MD";
   const PROBE_TTL_MS = 30000;
@@ -114,7 +135,9 @@
             resolve({ ...DEFAULTS });
             return;
           }
-          resolve({ ...DEFAULTS, ...(items || {}) });
+          const merged = { ...DEFAULTS, ...(items || {}) };
+          merged.endpoint = sanitizeEndpoint(merged.endpoint);
+          resolve(merged);
         });
       } catch (err) {
         if (isContextError(err)) {
@@ -542,6 +565,7 @@
     let allowShow = true;
     let remountTimer = null;
     let remountObserver = null;
+    let remountHandle = null;
 
     try {
       wrap = document.createElement("div");
@@ -659,9 +683,16 @@
       if (!allowShow || !wrap || !document.body) return;
       if (wrap.isConnected) return;
       if (document.querySelector(".md-to-docx-float")) return;
-      try {
-        document.body.appendChild(wrap);
-      } catch (_) {}
+      const remount = () => {
+        try {
+          document.body.appendChild(wrap);
+        } catch (_) {}
+      };
+      if (remountHandle && typeof remountHandle.runQuiet === "function") {
+        remountHandle.runQuiet(remount);
+      } else {
+        remount();
+      }
     }
 
     function scheduleRemountCheck() {
@@ -673,10 +704,33 @@
     }
 
     function ensureRemountObserver() {
-      if (remountObserver || typeof MutationObserver === "undefined") return;
+      if (remountObserver || remountHandle) return;
+      if (global.MdToDocxObserve && typeof global.MdToDocxObserve.watch === "function") {
+        try {
+          remountHandle = global.MdToDocxObserve.watch(
+            document.documentElement,
+            () => {
+              if (!allowShow) return;
+              if (wrap && !wrap.isConnected) scheduleRemountCheck();
+            },
+            { debounceMs: 80 }
+          );
+          remountObserver = remountHandle;
+          return;
+        } catch (_) {
+          remountHandle = null;
+        }
+      }
+      if (typeof MutationObserver === "undefined") return;
       try {
-        remountObserver = new MutationObserver(() => {
+        remountObserver = new MutationObserver((mutations) => {
           if (!allowShow) return;
+          if (
+            global.MdToDocxObserve &&
+            global.MdToDocxObserve.shouldIgnoreMutations(mutations)
+          ) {
+            return;
+          }
           if (wrap && !wrap.isConnected) scheduleRemountCheck();
         });
         remountObserver.observe(document.documentElement, {

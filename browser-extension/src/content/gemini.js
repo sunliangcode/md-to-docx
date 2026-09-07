@@ -1,29 +1,66 @@
 (function () {
+  const USER_SEL =
+    "user-query, .user-query, [data-message-author-role='user'], .query-text";
+  const ASST_SEL =
+    "model-response, .model-response-text, .response-content, message-content";
+
+  function sortByDocumentOrder(items) {
+    return items.slice().sort((a, b) => {
+      if (a.el === b.el) return 0;
+      const pos = a.el.compareDocumentPosition(b.el);
+      if (pos & Node.DOCUMENT_POSITION_FOLLOWING) return -1;
+      if (pos & Node.DOCUMENT_POSITION_PRECEDING) return 1;
+      return 0;
+    });
+  }
+
+  function dedupeNested(items) {
+    const out = [];
+    for (const item of items) {
+      const nested = out.some(
+        (prev) =>
+          prev.el !== item.el &&
+          (prev.el.contains(item.el) || item.el.contains(prev.el))
+      );
+      if (nested) {
+        // Prefer the outer assistant/user container when nested.
+        const idx = out.findIndex(
+          (prev) => prev.el.contains(item.el) || item.el.contains(prev.el)
+        );
+        if (idx >= 0) {
+          const prev = out[idx];
+          if (prev.el.contains(item.el)) continue;
+          out[idx] = item;
+        }
+        continue;
+      }
+      out.push(item);
+    }
+    return out;
+  }
+
   function extractTurns(document) {
     const turns = [];
-    const userBlocks = document.querySelectorAll(
-      "user-query, .user-query, [data-message-author-role='user'], .query-text"
-    );
-    const assistantBlocks = document.querySelectorAll(
-      "model-response, .model-response-text, .response-content, .markdown, message-content"
-    );
-
-    userBlocks.forEach((el) => {
+    document.querySelectorAll(USER_SEL).forEach((el) => {
       if ((el.textContent || "").trim()) turns.push({ role: "user", el });
     });
-    assistantBlocks.forEach((el) => {
+    document.querySelectorAll(ASST_SEL).forEach((el) => {
+      // Skip assistant nodes nested inside another matched assistant node
+      if (el.closest && el.parentElement && el.parentElement.closest(ASST_SEL)) {
+        return;
+      }
       if ((el.textContent || "").trim().length > 5) {
         turns.push({ role: "assistant", el });
       }
     });
 
     if (!turns.length) {
-      const nodes = document.querySelectorAll(
-        ".model-response-text, .response-content, .markdown"
-      );
-      nodes.forEach((el) => turns.push({ role: "assistant", el }));
+      document
+        .querySelectorAll(".model-response-text, .response-content, .markdown")
+        .forEach((el) => turns.push({ role: "assistant", el }));
     }
-    return turns;
+
+    return dedupeNested(sortByDocumentOrder(turns));
   }
 
   function extractConversationMarkdown(document) {
@@ -48,7 +85,7 @@
 
   function attachButtons() {
     const nodes = document.querySelectorAll(
-      ".model-response-text, .response-content, .markdown"
+      ".model-response-text, .response-content, message-content"
     );
     const last = nodes[nodes.length - 1];
     if (!last) return;
@@ -63,9 +100,10 @@
   }
 
   function setup() {
-    const observer = new MutationObserver(() => attachButtons());
-    observer.observe(document.body, { childList: true, subtree: true });
-    attachButtons();
+    const obs = MdToDocxObserve.watch(document.body, () => {
+      obs.runQuiet(() => attachButtons());
+    });
+    obs.runQuiet(() => attachButtons());
     MdToDocxExport.injectFloatingButton(() => {
       const data = extractConversationMarkdown(document);
       if (!data || !data.markdown.trim()) {
@@ -86,6 +124,7 @@
     module.exports = {
       extractLatestAssistantMarkdown,
       extractConversationMarkdown,
+      extractTurns,
     };
   }
 })();

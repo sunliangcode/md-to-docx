@@ -1,9 +1,14 @@
 {
   "name": "md-to-docx-browser-extension",
   "private": true,
-  "version": "0.2.0",
+  "version": "0.2.4",
   "scripts": {
-    "test": "node --test test/*.test.js"
+    "test": "node --test test/*.test.js",
+    "vendor:turndown": "node scripts/vendor-turndown.js",
+    "postinstall": "npm run vendor:turndown"
+  },
+  "dependencies": {
+    "turndown": "^7.2.4"
   },
   "devDependencies": {
     "jsdom": "^24.0.0"

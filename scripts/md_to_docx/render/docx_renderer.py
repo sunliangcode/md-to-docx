@@ -40,6 +40,18 @@ def _set_left_border(paragraph: Paragraph, color_hex: str, width: int = 12) -> N
     ppr.append(p_bdr)
 
 
+def _set_bottom_border(paragraph: Paragraph, color_hex: str, width: int = 6) -> None:
+    ppr = paragraph._p.get_or_add_pPr()
+    p_bdr = OxmlElement("w:pBdr")
+    bottom = OxmlElement("w:bottom")
+    bottom.set(qn("w:val"), "single")
+    bottom.set(qn("w:sz"), str(width))
+    bottom.set(qn("w:space"), "1")
+    bottom.set(qn("w:color"), color_hex)
+    p_bdr.append(bottom)
+    ppr.append(p_bdr)
+
+
 def _add_hyperlink(paragraph: Paragraph, text: str, url: str) -> None:
     part = paragraph.part
     r_id = part.relate_to(
@@ -103,6 +115,9 @@ class DocxRenderer:
         return self._bookmark_id
 
     def render(self, document: n.Document) -> None:
+        from md_to_docx.render.footnotes import reset_footnote_state
+
+        reset_footnote_state()
         meta = document.metadata
         if meta.title and document.blocks and not (
             isinstance(document.blocks[0], n.Heading) and document.blocks[0].level == 1
@@ -111,6 +126,9 @@ class DocxRenderer:
 
         for block in document.blocks:
             self.render_block(block)
+
+        if document.footnotes:
+            self._render_footnotes(document.footnotes)
 
     def render_block(self, block: n.Block) -> None:
         if isinstance(block, n.Heading):
@@ -133,7 +151,7 @@ class DocxRenderer:
             self._render_callout(block)
         elif isinstance(block, n.ThematicBreak):
             p = self.doc.add_paragraph()
-            p.paragraph_format.border_bottom = True
+            _set_bottom_border(p, "999999", width=6)
         elif isinstance(block, n.Image):
             self._render_image(block)
         elif isinstance(block, n.Figure):
@@ -153,36 +171,73 @@ class DocxRenderer:
         p = self.doc.add_paragraph()
         self._render_inlines(p, block.children)
 
+    def _inline_plain_text(self, children: tuple[n.Inline, ...]) -> str:
+        parts: list[str] = []
+        for child in children:
+            if isinstance(child, n.Text):
+                parts.append(child.value)
+            elif isinstance(child, (n.Strong, n.Emphasis, n.Strike, n.Link)):
+                parts.append(self._inline_plain_text(child.children))
+            elif isinstance(child, n.Code):
+                parts.append(child.value)
+        return "".join(parts)
+
+    def _render_styled_inlines(
+        self,
+        paragraph: Paragraph,
+        children: tuple[n.Inline, ...],
+        *,
+        bold: bool = False,
+        italic: bool = False,
+        strike: bool = False,
+    ) -> None:
+        for child in children:
+            if isinstance(child, n.Text):
+                run = paragraph.add_run(child.value)
+                if bold:
+                    run.bold = True
+                if italic:
+                    run.italic = True
+                if strike:
+                    run.font.strike = True
+            elif isinstance(child, n.Strong):
+                self._render_styled_inlines(
+                    paragraph, child.children, bold=True, italic=italic, strike=strike
+                )
+            elif isinstance(child, n.Emphasis):
+                self._render_styled_inlines(
+                    paragraph, child.children, bold=bold, italic=True, strike=strike
+                )
+            elif isinstance(child, n.Strike):
+                self._render_styled_inlines(
+                    paragraph, child.children, bold=bold, italic=italic, strike=True
+                )
+            elif isinstance(child, n.Code):
+                run = paragraph.add_run(child.value)
+                run.font.name = "Consolas"
+                run.font.size = Pt(9)
+                if bold:
+                    run.bold = True
+                if italic:
+                    run.italic = True
+            elif isinstance(child, n.Link):
+                text = self._inline_plain_text(child.children) or child.href
+                _add_hyperlink(paragraph, text, child.href)
+            else:
+                self._render_inlines(paragraph, (child,))
+
     def _render_inlines(self, paragraph: Paragraph, children: tuple[n.Inline, ...]) -> None:
         for child in children:
             if isinstance(child, n.Text):
                 paragraph.add_run(child.value)
-            elif isinstance(child, n.Strong):
-                run = paragraph.add_run()
-                run.bold = True
-                for sub in child.children:
-                    if isinstance(sub, n.Text):
-                        run.text += sub.value
-            elif isinstance(child, n.Emphasis):
-                run = paragraph.add_run()
-                run.italic = True
-                for sub in child.children:
-                    if isinstance(sub, n.Text):
-                        run.text += sub.value
-            elif isinstance(child, n.Strike):
-                run = paragraph.add_run()
-                run.font.strike = True
-                for sub in child.children:
-                    if isinstance(sub, n.Text):
-                        run.text += sub.value
+            elif isinstance(child, (n.Strong, n.Emphasis, n.Strike)):
+                self._render_styled_inlines(paragraph, (child,))
             elif isinstance(child, n.Code):
                 run = paragraph.add_run(child.value)
                 run.font.name = "Consolas"
                 run.font.size = Pt(9)
             elif isinstance(child, n.Link):
-                text = "".join(
-                    c.value for c in child.children if isinstance(c, n.Text)
-                ) or child.href
+                text = self._inline_plain_text(child.children) or child.href
                 _add_hyperlink(paragraph, text, child.href)
             elif isinstance(child, n.InlineImage):
                 self._add_inline_image(paragraph, child)
@@ -204,6 +259,35 @@ class DocxRenderer:
                 from md_to_docx.render.footnotes import add_footnote_ref
 
                 add_footnote_ref(paragraph, child.key)
+
+    def _render_footnotes(self, footnotes: tuple[n.FootnoteDef, ...]) -> None:
+        from md_to_docx.render.footnotes import footnote_keys_in_order
+
+        by_key = {fn.key: fn for fn in footnotes}
+        order = footnote_keys_in_order()
+        # Include defs that were never referenced
+        for fn in footnotes:
+            if fn.key not in order:
+                order.append(fn.key)
+        if not order:
+            return
+        self.doc.add_heading("Notes", level=1)
+        for idx, key in enumerate(order, start=1):
+            fn = by_key.get(key)
+            if fn is None:
+                continue
+            p = self.doc.add_paragraph()
+            marker = p.add_run(f"{idx}. ")
+            marker.bold = True
+            if fn.children:
+                first = fn.children[0]
+                if isinstance(first, n.Paragraph):
+                    self._render_inlines(p, first.children)
+                    for extra in fn.children[1:]:
+                        self.render_block(extra)
+                else:
+                    for block in fn.children:
+                        self.render_block(block)
 
     def _render_list(self, block: n.ListBlock, level: int) -> None:
         style = "List Number" if block.ordered else "List Bullet"
@@ -239,6 +323,27 @@ class DocxRenderer:
                     for p in tc.paragraphs:
                         for run in p.runs:
                             run.bold = True
+        if block.caption:
+            num = 0
+            if block.identifier:
+                key = block.identifier if block.identifier.startswith("tbl:") else f"tbl:{block.identifier}"
+                _label, num = self.xref_map.get(key, (self.table_label, 0))
+            cap = self.doc.add_paragraph(style="Caption")
+            if num:
+                cap.add_run(f"{self.table_label} {num}. {block.caption}")
+            else:
+                cap.add_run(block.caption)
+            if block.identifier:
+                bid = self._next_bookmark_id()
+                ident = block.identifier.replace("tbl:", "")
+                p = cap._p
+                bm_start = OxmlElement("w:bookmarkStart")
+                bm_start.set(qn("w:id"), str(bid))
+                bm_start.set(qn("w:name"), f"tbl-{ident}")
+                p.insert(0, bm_start)
+                bm_end = OxmlElement("w:bookmarkEnd")
+                bm_end.set(qn("w:id"), str(bid))
+                p.append(bm_end)
 
     def _render_code(self, block: n.CodeBlock) -> None:
         for line in block.text.splitlines() or [""]:

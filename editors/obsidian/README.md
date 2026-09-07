@@ -5,9 +5,13 @@ Export vault Markdown to professional Word using the **md-to-docx** CLI (desktop
 ## Prerequisites
 
 ```bash
-pip install md2docx-compiler
+# From a clone of this repo (package is not on PyPI yet):
+pip install -e /path/to/md-to-docx
+# or:
+pip install "git+https://github.com/sunliang11/md-to-docx.git"
 ```
 
+The planned PyPI name is `md2docx-compiler`; the CLI command remains `md-to-docx`.
 `md-to-docx` must be on your system `PATH`.
 
 ## Install (manual)

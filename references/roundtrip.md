@@ -40,8 +40,8 @@ md-to-docx diff a.md b.md --format md   # changelog style
 | Images | Yes | Yes (media → `{stem}-media/`) |
 | Lists | Yes | Best-effort |
 | Page breaks | Yes | Yes (`<!-- pagebreak -->`) |
-| Footnotes | Yes | Partial |
-| Math (LaTeX/OMML) | Yes | Best-effort (plain text fallback) |
+| Footnotes | Yes (superscript + Notes section) | Partial |
+| Math (LaTeX/OMML) | Yes (basic subset) | Best-effort (plain text fallback) |
 | Mermaid | Yes (PNG) | As ` ```mermaid ` fence if detected |
 | TOC field | Yes | Skipped (warning) |
 | Figure captions | Yes | Partial |
