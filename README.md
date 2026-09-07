@@ -26,10 +26,10 @@ English | [中文](README.zh.md)
 - ✓ **DOCX → Markdown** — `md-to-docx reverse report.docx`
 - ✓ **Document Diff** — structural compare for `.md` and `.docx` ([roundtrip](references/roundtrip.md))
 - ✓ **Templates** — presets + community Word templates ([presets](references/presets.md) · [templates](templates/README.md))
-- ✓ **MCP** — convert, validate, apply_template, list_presets ([mcp](references/mcp.md))
+- ✓ **MCP** — convert, validate, apply_template, list_presets, reverse, diff ([mcp](references/mcp.md))
 - ✓ **Cursor / Claude / Codex / Gemini** — [SKILL.md](SKILL.md) · [skills/](skills/)
-- ✓ **Browser Extension** — export ChatGPT / Claude / Gemini chats ([extension](browser-extension/README.md))
-- ✓ **Desktop context menu** — Finder / Explorer right-click `.md` ↔ `.docx` ([desktop](desktop/README.md))
+- ○ **Browser Extension** *(experimental)* — export ChatGPT / Claude / Gemini chats ([extension](browser-extension/README.md))
+- ○ **Desktop context menu** *(experimental)* — Finder / Explorer right-click `.md` ↔ `.docx` ([desktop](desktop/README.md))
 - ✓ **GitHub Action** — CI builds DOCX from Markdown ([action](action/README.md))
 - ✓ **Local & Private** — no API keys, self-host with Docker
 
@@ -77,7 +77,9 @@ See the full [examples gallery](examples/README.md).
 
 ### Ecosystem
 
-[CLI](references/cli.md) · [MCP](references/mcp.md) · [VS Code](editors/vscode/README.md) · [Obsidian](editors/obsidian/README.md) · [Browser](browser-extension/README.md) · [Desktop](desktop/README.md) · [GitHub Action](action/README.md) · [Docker](web/README.md)
+**Core:** [CLI](references/cli.md) · [MCP](references/mcp.md) · [GitHub Action](action/README.md) · [Docker Playground](web/README.md)
+
+**Experimental** (need local CLI or Playground): [VS Code](editors/vscode/README.md) · [Obsidian](editors/obsidian/README.md) · [Browser](browser-extension/README.md) · [Desktop](desktop/README.md)
 
 ---
 
@@ -247,7 +249,7 @@ md-to-docx report.md         # or ./bin/convert report.md (no pip)
 
 Install options and entry points: [CLI Reference — How to run commands](references/cli.md#how-to-run-commands).
 
-**Not on PyPI yet.** Planned package name: `md2docx-compiler` · CLI command: `md-to-docx`. Install from source or `pip install "git+https://github.com/sunliang11/md-to-docx.git"`.
+**Not on PyPI yet.** Planned package name: `md2docx-compiler` · CLI command: `md-to-docx`. Install from source or `pip install "git+https://github.com/sunliang11/md-to-docx.git"`. After the first publish (see [release.md](references/release.md)), `pip install md2docx-compiler` will work.
 
 **Mermaid note:** Without `mmdc`, diagrams appear as source code blocks. Use `--strict-mermaid` to fail instead. Full matrix: [installation.md](references/installation.md).
 

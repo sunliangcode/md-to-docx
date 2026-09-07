@@ -2,6 +2,9 @@ import * as vscode from "vscode";
 import { spawn } from "child_process";
 import * as path from "path";
 
+const INSTALL_HINT =
+  ' Install with: pip install "git+https://github.com/sunliang11/md-to-docx.git"';
+
 function getConfig() {
   const cfg = vscode.workspace.getConfiguration("md-to-docx");
   return {
@@ -24,7 +27,8 @@ function runConvert(filePath: string): Promise<{ code: number; stderr: string }>
   channel.appendLine(`> ${cli} ${args.join(" ")}`);
 
   return new Promise((resolve) => {
-    const proc = spawn(cli, args, { shell: true });
+    // shell: false — avoid command injection via configurable path/extraArgs
+    const proc = spawn(cli, args, { shell: false });
     let stderr = "";
     proc.stderr.on("data", (d) => {
       const text = d.toString();
@@ -32,6 +36,10 @@ function runConvert(filePath: string): Promise<{ code: number; stderr: string }>
       channel.append(text);
     });
     proc.stdout.on("data", (d) => channel.append(d.toString()));
+    proc.on("error", (err) => {
+      stderr += err.message;
+      resolve({ code: 1, stderr });
+    });
     proc.on("close", (code) => resolve({ code: code ?? 1, stderr }));
   });
 }
@@ -54,9 +62,12 @@ export function activate(context: vscode.ExtensionContext) {
 
     const { code, stderr } = await runConvert(filePath);
     if (code !== 0) {
-      const hint = stderr.includes("not found") || stderr.includes("ENOENT")
-        ? " Install with: pip install md2docx-compiler"
-        : "";
+      const hint =
+        stderr.includes("not found") ||
+        stderr.includes("ENOENT") ||
+        stderr.includes("spawn")
+          ? INSTALL_HINT
+          : "";
       vscode.window.showErrorMessage(`md-to-docx failed (exit ${code}).${hint}`);
       return;
     }

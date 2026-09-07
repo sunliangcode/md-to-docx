@@ -10,7 +10,9 @@ from md_to_docx import __version__
 from md_to_docx.mcp.handlers import (
     handle_apply_template,
     handle_convert_markdown,
+    handle_diff_documents,
     handle_list_presets,
+    handle_reverse_document,
     handle_validate_document,
 )
 
@@ -19,6 +21,8 @@ TOOL_HANDLERS = {
     "apply_template": handle_apply_template,
     "validate_document": handle_validate_document,
     "list_presets": handle_list_presets,
+    "reverse_document": handle_reverse_document,
+    "diff_documents": handle_diff_documents,
 }
 
 TOOL_SCHEMAS = [
@@ -74,13 +78,48 @@ TOOL_SCHEMAS = [
         "description": "List available document presets.",
         "inputSchema": {"type": "object", "properties": {}},
     },
+    {
+        "name": "reverse_document",
+        "description": "Convert a local DOCX file to Markdown (DOCX → MD).",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "input_path": {"type": "string", "description": "Path to .docx file"},
+                "output_path": {
+                    "type": "string",
+                    "description": "Output .md path (default: same stem beside input)",
+                },
+            },
+            "required": ["input_path"],
+        },
+    },
+    {
+        "name": "diff_documents",
+        "description": "Structural AST diff between two .md or .docx documents.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "a": {"type": "string", "description": "First document path (.md or .docx)"},
+                "b": {"type": "string", "description": "Second document path (.md or .docx)"},
+                "format": {
+                    "type": "string",
+                    "enum": ["text", "json", "md"],
+                    "description": "Output format (default: text)",
+                },
+            },
+            "required": ["a", "b"],
+        },
+    },
 ]
 
 
 def _print_help() -> None:
     print("md-to-docx MCP server")
     print(f"version: {__version__}")
-    print("tools: convert_markdown, apply_template, validate_document, list_presets")
+    print(
+        "tools: convert_markdown, apply_template, validate_document, "
+        "list_presets, reverse_document, diff_documents"
+    )
     print("preview: not in 2.0 — see web playground")
     print("Run without --help to start stdio transport.")
 

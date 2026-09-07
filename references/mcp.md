@@ -52,6 +52,8 @@ Or with full path / module entry:
 | `apply_template` | `input_path` + `template` + `output_path` |
 | `validate_document` | Check markdown without converting |
 | `list_presets` | List preset names and descriptions |
+| `reverse_document` | DOCX → Markdown (`input_path` → `output_path`) |
+| `diff_documents` | Structural AST diff (`a`, `b`, optional `format`) |
 
 `render_preview` is **not** in MCP v2.0 — use the [Web Playground](../web/README.md) for HTML preview.
 

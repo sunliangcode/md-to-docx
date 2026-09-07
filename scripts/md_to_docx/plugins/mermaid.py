@@ -32,8 +32,8 @@ class MermaidPlugin(PluginBase):
         for block in document.blocks:
             if isinstance(block, n.Mermaid):
                 idx += 1
-                svg = media / f"mermaid_{idx:02d}.svg"
                 png = media / f"mermaid_{idx:02d}.png"
+                svg = media / f"mermaid_{idx:02d}.svg"
                 try:
                     render_mermaid_to_files(block.source, svg, png=png)
                     key = f"mermaid:{hash(block.source)}"

@@ -109,15 +109,17 @@ class DocxRenderer:
         self.xref_map = xref_map or {}
         self.media_paths = media_paths or {}
         self._bookmark_id = 0
+        from md_to_docx.render.footnotes import FootnoteState
+
+        self._footnote_state = FootnoteState()
 
     def _next_bookmark_id(self) -> int:
         self._bookmark_id += 1
         return self._bookmark_id
 
     def render(self, document: n.Document) -> None:
-        from md_to_docx.render.footnotes import reset_footnote_state
+        from md_to_docx.render.footnotes import ensure_footnotes_part
 
-        reset_footnote_state()
         meta = document.metadata
         if meta.title and document.blocks and not (
             isinstance(document.blocks[0], n.Heading) and document.blocks[0].level == 1
@@ -127,8 +129,8 @@ class DocxRenderer:
         for block in document.blocks:
             self.render_block(block)
 
-        if document.footnotes:
-            self._render_footnotes(document.footnotes)
+        if document.footnotes or self._footnote_state.order:
+            ensure_footnotes_part(self.doc, self._footnote_state, document.footnotes)
 
     def render_block(self, block: n.Block) -> None:
         if isinstance(block, n.Heading):
@@ -256,38 +258,7 @@ class DocxRenderer:
                 text = f"{label} {num}"
                 _add_hyperlink(paragraph, text, f"#{child.kind}-{child.identifier}")
             elif isinstance(child, n.FootnoteRef):
-                from md_to_docx.render.footnotes import add_footnote_ref
-
-                add_footnote_ref(paragraph, child.key)
-
-    def _render_footnotes(self, footnotes: tuple[n.FootnoteDef, ...]) -> None:
-        from md_to_docx.render.footnotes import footnote_keys_in_order
-
-        by_key = {fn.key: fn for fn in footnotes}
-        order = footnote_keys_in_order()
-        # Include defs that were never referenced
-        for fn in footnotes:
-            if fn.key not in order:
-                order.append(fn.key)
-        if not order:
-            return
-        self.doc.add_heading("Notes", level=1)
-        for idx, key in enumerate(order, start=1):
-            fn = by_key.get(key)
-            if fn is None:
-                continue
-            p = self.doc.add_paragraph()
-            marker = p.add_run(f"{idx}. ")
-            marker.bold = True
-            if fn.children:
-                first = fn.children[0]
-                if isinstance(first, n.Paragraph):
-                    self._render_inlines(p, first.children)
-                    for extra in fn.children[1:]:
-                        self.render_block(extra)
-                else:
-                    for block in fn.children:
-                        self.render_block(block)
+                self._footnote_state.add_ref(paragraph, child.key)
 
     def _render_list(self, block: n.ListBlock, level: int) -> None:
         style = "List Number" if block.ordered else "List Bullet"

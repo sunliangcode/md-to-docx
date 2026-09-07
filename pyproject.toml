@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "md2docx-compiler"
-version = "1.1.0"
+version = "1.1.1"
 description = "The open-source document compiler for the AI era. Markdown / AI output → professional DOCX."
 readme = "README.md"
 license = "MIT"

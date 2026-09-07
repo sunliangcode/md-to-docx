@@ -98,9 +98,15 @@ def test_footnotes_convert(tmp_path: Path):
     convert_file(dst, out)
     text = _document_text(out)
     assert "footnote reference" in text
-    assert "Notes" in text
-    assert "footnote text" in text
-    assert "**bold**" not in text
+    with zipfile.ZipFile(out) as zf:
+        assert "word/footnotes.xml" in zf.namelist()
+    root = _xml(out, "word/document.xml")
+    assert root.findall(".//w:footnoteReference", namespaces=NS)
+    fn_text = "".join(_xml(out, "word/footnotes.xml").xpath(".//w:t/text()", namespaces=NS))
+    assert "footnote text" in fn_text
+    assert "**bold**" not in fn_text
+    # Bold should be present as a run, not raw markdown
+    assert "bold" in fn_text
 
 
 def test_captions_convert(tmp_path: Path):

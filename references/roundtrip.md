@@ -40,8 +40,8 @@ md-to-docx diff a.md b.md --format md   # changelog style
 | Images | Yes | Yes (media → `{stem}-media/`) |
 | Lists | Yes | Best-effort |
 | Page breaks | Yes | Yes (`<!-- pagebreak -->`) |
-| Footnotes | Yes (superscript + Notes section) | Partial |
-| Math (LaTeX/OMML) | Yes (basic subset) | Best-effort (plain text fallback) |
+| Footnotes | Yes (Word `footnotes.xml`) | Yes (from `footnotes.xml`) |
+| Math (LaTeX/OMML) | Yes (expanded MathML subset) | Best-effort (plain text fallback) |
 | Mermaid | Yes (PNG) | As ` ```mermaid ` fence if detected |
 | TOC field | Yes | Skipped (warning) |
 | Figure captions | Yes | Partial |
@@ -71,7 +71,7 @@ dist/docx/
 Build in CI with the [GitHub Action](../action/README.md):
 
 ```yaml
-- uses: sunliang11/md-to-docx/action@v1.1.0
+- uses: sunliang11/md-to-docx/action@v1.1.1
   with:
     input: docs/report.md
     preset: technical

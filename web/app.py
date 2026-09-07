@@ -4,8 +4,10 @@ from __future__ import annotations
 
 import asyncio
 import io
+import os
 import shutil
 import tempfile
+import uuid
 import zipfile
 from pathlib import Path
 from typing import Any, Literal
@@ -15,6 +17,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse, PlainTextResponse, Response
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field, ValidationError
+from starlette.background import BackgroundTask
 from starlette.concurrency import run_in_threadpool
 
 from md_to_docx import __version__
@@ -122,13 +125,68 @@ class DiffRequest(BaseModel):
 
 app = FastAPI(title="md-to-docx Playground", version=__version__)
 
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=False,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+
+def _cors_allow_list() -> list[str] | None:
+    """Return explicit origins, ``['*']``, or ``None`` for loopback-reflect mode."""
+    raw = os.environ.get("MD_TO_DOCX_CORS_ORIGINS", "").strip()
+    if not raw:
+        return None  # reflect Origin when Host is loopback (extension-safe)
+    if raw == "*":
+        return ["*"]
+    return [o.strip() for o in raw.split(",") if o.strip()]
+
+
+_CORS_LIST = _cors_allow_list()
+if _CORS_LIST is not None:
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=_CORS_LIST,
+        allow_credentials=False,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
+
+
+@app.middleware("http")
+async def loopback_cors_reflect(request: Request, call_next):
+    """When CORS env is unset, reflect Origin only if the request Host is loopback.
+
+    Browser extension content scripts call the Playground from chatgpt.com / etc.
+    while the server stays on 127.0.0.1 — Host-based reflect keeps that working
+    without opening CORS when the app is bound on a public interface.
+    """
+    if _CORS_LIST is not None:
+        return await call_next(request)
+
+    if request.method == "OPTIONS":
+        host = (request.headers.get("host") or "").split("%")[0]
+        host_name = host.split(":")[0].strip("[]").lower()
+        if host_name in ("127.0.0.1", "localhost", "::1"):
+            origin = request.headers.get("origin", "*")
+            return Response(
+                status_code=204,
+                headers={
+                    "Access-Control-Allow-Origin": origin,
+                    "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+                    "Access-Control-Allow-Headers": request.headers.get(
+                        "access-control-request-headers", "*"
+                    ),
+                    "Access-Control-Max-Age": "86400",
+                    "Vary": "Origin",
+                },
+            )
+
+    response = await call_next(request)
+    host = (request.headers.get("host") or "").split("%")[0]
+    host_name = host.split(":")[0].strip("[]").lower()
+    if host_name in ("127.0.0.1", "localhost", "::1"):
+        origin = request.headers.get("origin")
+        if origin:
+            response.headers["Access-Control-Allow-Origin"] = origin
+            response.headers["Access-Control-Allow-Methods"] = "GET, POST, OPTIONS"
+            response.headers.setdefault("Access-Control-Allow-Headers", "*")
+            response.headers["Vary"] = "Origin"
+    return response
 
 
 def _detail(problem: str, cause: str, fix: str) -> dict[str, str]:
@@ -236,7 +294,7 @@ def _convert_with_options(
             strict_mermaid=options.strict_mermaid,
             no_plugins=no_plugins,
         )
-        persistent = Path(tempfile.gettempdir()) / "md_to_docx_document.docx"
+        persistent = Path(tempfile.gettempdir()) / f"md_to_docx_{uuid.uuid4().hex}.docx"
         persistent.write_bytes(out.read_bytes())
         return persistent
 
@@ -389,7 +447,7 @@ def _safe_extract_zip(zf: zipfile.ZipFile, dest: Path) -> None:
                 "Re-pack the zip without absolute or parent paths",
             )
         target = (dest / name).resolve()
-        if not str(target).startswith(str(dest)):
+        if not target.is_relative_to(dest.resolve()):
             _http_error(
                 400,
                 "Unsafe zip entry",
@@ -694,7 +752,7 @@ async def _run_convert(
         out_path,
         media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
         filename="document.docx",
-        background=None,
+        background=BackgroundTask(lambda p=out_path: p.unlink(missing_ok=True)),
     )
 
 

@@ -1,6 +1,7 @@
 const DEFAULTS = {
   endpoint: "http://127.0.0.1:8080",
   preset: "technical",
+  numbering: false,
   fallbackMd: true,
   showFloating: true,
   enableWebpageExport: false,
@@ -22,6 +23,7 @@ document.getElementById("save").addEventListener("click", async () => {
   const endpointError = document.getElementById("endpointError");
   const endpoint = document.getElementById("endpoint").value.trim().replace(/\/$/, "");
   const preset = document.getElementById("preset").value;
+  const numbering = document.getElementById("numbering").checked;
   const fallbackMd = document.getElementById("fallbackMd").checked;
   const showFloating = document.getElementById("showFloating").checked;
   const enableWebpageExport = document.getElementById("enableWebpageExport").checked;
@@ -46,6 +48,7 @@ document.getElementById("save").addEventListener("click", async () => {
         chrome.storage.sync.set({
           endpoint,
           preset,
+          numbering,
           fallbackMd,
           showFloating,
           enableWebpageExport: false,
@@ -64,7 +67,7 @@ document.getElementById("save").addEventListener("click", async () => {
   }
 
   chrome.storage.sync.set(
-    { endpoint, preset, fallbackMd, showFloating, enableWebpageExport },
+    { endpoint, preset, numbering, fallbackMd, showFloating, enableWebpageExport },
     () => {
       chrome.runtime.sendMessage(
         { type: "md-to-docx-sync-webpage", enabled: enableWebpageExport },
@@ -79,6 +82,7 @@ document.getElementById("save").addEventListener("click", async () => {
 chrome.storage.sync.get(DEFAULTS, (items) => {
   document.getElementById("endpoint").value = items.endpoint;
   document.getElementById("preset").value = items.preset;
+  document.getElementById("numbering").checked = !!items.numbering;
   document.getElementById("fallbackMd").checked = items.fallbackMd !== false;
   document.getElementById("showFloating").checked = items.showFloating !== false;
   document.getElementById("enableWebpageExport").checked = !!items.enableWebpageExport;

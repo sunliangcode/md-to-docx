@@ -4,27 +4,39 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [1.1.1] - 2026-09-07
+
 ### Fixed
 
 - Inline Markdown (bold / italic / links / code) now parses into the Document AST instead of raw `**…**` text in DOCX
-- Footnote documents no longer crash (`callout_map` NameError); refs render as superscripts + trailing Notes section
+- Footnote documents no longer crash (`callout_map` NameError); refs render as true Word `footnotes.xml` (not a trailing Notes section)
 - Figure `{#fig:id}` / `Table: … {#tbl:id}` captions and `[@fig:…]` cross-refs work after normalizer collapses blank lines
 - AST diff no longer crashes on inline `Code` nodes
 - Browser extension: Gemini turn order interleaved; batch export waits for content fingerprint change; host access narrowed (webpage export is opt-in); convert endpoint restricted to loopback
+- Concurrent Web Playground converts no longer share footnote state or a fixed temp DOCX path
+- `apply_preset` no longer overwrites custom `figure_label` / `table_label` / `toc_title` when callers set non-defaults
+- VS Code extension spawns the CLI without a shell (avoids injection via `extraArgs`)
+- Zip extract path checks use `Path.is_relative_to` instead of string prefix matching
 
 ### Changed
 
 - README marks browser extension / VS Code / Obsidian / desktop context menu as experimental vs core surfaces
-- Editor install docs use git/source install (not a published PyPI wheel yet)
+- Editor install docs use git/source install (not a published PyPI wheel yet); VS Code failure hint matches
 - `SECURITY.md` supported versions updated to 1.x
+- Browser extension follows preset TOC by default (`toc` omitted); options expose numbering
+- Web CORS defaults to loopback origins; set `MD_TO_DOCX_CORS_ORIGINS=*` (or a comma list) for public deploy
+- Mermaid render uses a single `mmdc` invocation (PNG); SVG is optional
+- Math OMML converter covers more MathML nodes (`msub`, `msubsup`, `mroot`, `mfenced`, `mtable`, …)
+- MCP adds `reverse_document` and `diff_documents` tools
+- `md-to-docx reverse INPUT` writes `INPUT` with a `.md` suffix in the same directory when `-o` is omitted
 
 ### Added
 
 - Web Playground modes: Convert (validate, ODM inserts, community templates, engine HTML preview), Reverse, and Diff
-
-### Changed
-
-- `md-to-docx reverse INPUT` writes `INPUT` with a `.md` suffix in the same directory when `-o` is omitted
+- Dependabot for `browser-extension` npm dependencies
+- Optional CI Mermaid job when `mmdc` is available
+- Roundtrip fidelity tests for tables, lists, and captions
+- Release workflow can publish to PyPI when `PYPI_API_TOKEN` secret is set
 
 ## [1.1.0] - 2026-09-03
 
@@ -78,5 +90,4 @@ All notable changes to this project will be documented in this file.
 
 ### Changed
 
-- Default engine became **native** (earlier builds were pandoc-oriented)
-- Package name `md2docx-compiler` on PyPI; CLI command remains `md-to-docx`
+- Package layout under `scripts/md_to_docx/` with Hatchling packaging (`md2docx-compiler`)

@@ -61,13 +61,20 @@ def resolve_mermaid_width() -> int | None:
 
 def render_mermaid_to_files(
     source: str,
-    out_svg: Path,
+    out_svg: Path | None,
     *,
     png: Path | None = None,
     scale: float | None = None,
     width: int | None = None,
     browser: str | None = None,
 ) -> None:
+    """Render Mermaid source with a single ``mmdc`` invocation when possible.
+
+    Prefer PNG (embedded in DOCX). SVG is written only when ``out_svg`` is set
+    and ``png`` is None; when both are requested, PNG is rendered once and SVG
+    is skipped to avoid a second subprocess (set ``MD_TO_DOCX_MERMAID_SVG=1``
+    to also emit SVG via a second call).
+    """
     mmdc = shutil.which("mmdc")
     if not mmdc:
         raise RuntimeError("`mmdc` not found on PATH")
@@ -77,14 +84,15 @@ def render_mermaid_to_files(
         width = resolve_mermaid_width()
     browser = browser or find_browser_executable()
 
+    if png is None and out_svg is None:
+        raise ValueError("render_mermaid_to_files requires png or out_svg")
+
     with tempfile.TemporaryDirectory() as tmp:
         src = Path(tmp) / "diagram.mmd"
         src.write_text(source, encoding="utf-8")
         cfg = Path(tmp) / "puppeteer.json"
         if browser:
             cfg.write_text(json.dumps({"executablePath": browser}), encoding="utf-8")
-
-        out_svg.parent.mkdir(parents=True, exist_ok=True)
 
         def _cmd(out: Path) -> list[str]:
             cmd = [mmdc, "-i", str(src), "-o", str(out), "-b", "white", "-s", str(scale)]
@@ -94,11 +102,18 @@ def render_mermaid_to_files(
                 cmd.extend(["-p", str(cfg)])
             return cmd
 
-        result = subprocess.run(_cmd(out_svg), capture_output=True, text=True)
+        primary = png if png is not None else out_svg
+        assert primary is not None
+        primary.parent.mkdir(parents=True, exist_ok=True)
+        result = subprocess.run(_cmd(primary), capture_output=True, text=True)
         if result.returncode != 0:
             raise RuntimeError(result.stderr or result.stdout or "mmdc failed")
 
-        if png is not None:
-            result2 = subprocess.run(_cmd(png), capture_output=True, text=True)
+        want_svg = out_svg is not None and (
+            png is None or os.environ.get("MD_TO_DOCX_MERMAID_SVG", "").strip() in ("1", "true", "yes")
+        )
+        if want_svg and out_svg is not None and out_svg != primary:
+            out_svg.parent.mkdir(parents=True, exist_ok=True)
+            result2 = subprocess.run(_cmd(out_svg), capture_output=True, text=True)
             if result2.returncode != 0:
-                raise RuntimeError(result2.stderr or "mmdc png failed")
+                raise RuntimeError(result2.stderr or "mmdc svg failed")

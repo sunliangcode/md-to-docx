@@ -51,3 +51,14 @@ jobs:
           files: |
             dist/*.whl
             dist/*.tar.gz
+
+      - name: Publish to PyPI
+        env:
+          PYPI_API_TOKEN: ${{ secrets.PYPI_API_TOKEN }}
+        run: |
+          if [ -z "$PYPI_API_TOKEN" ]; then
+            echo "PYPI_API_TOKEN not set — skip PyPI upload (wheel attached to GitHub Release)"
+            exit 0
+          fi
+          pip install twine
+          TWINE_USERNAME=__token__ TWINE_PASSWORD="$PYPI_API_TOKEN" twine upload dist/*

@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import re
 import shutil
 from dataclasses import dataclass
 from pathlib import Path
@@ -22,16 +21,6 @@ class Issue:
     line: int | None = None
 
 
-def _collect_xrefs(children: tuple[n.Inline, ...]) -> list[tuple[str, str]]:
-    refs: list[tuple[str, str]] = []
-    for child in children:
-        if isinstance(child, n.CrossRef):
-            refs.append((child.kind, child.identifier))
-        elif isinstance(child, (n.Strong, n.Emphasis, n.Strike, n.Link)):
-            refs.extend(_collect_xrefs(child.children))
-    return refs
-
-
 def validate_document(doc: n.Document, *, base_dir: Path) -> list[Issue]:
     issues: list[Issue] = []
     if not doc.blocks:
@@ -39,8 +28,20 @@ def validate_document(doc: n.Document, *, base_dir: Path) -> list[Issue]:
 
     defined_fig: set[str] = set()
     defined_tbl: set[str] = set()
+    defined_sec: set[str] = set()
+    footnote_keys: set[str] = {fn.key for fn in doc.footnotes}
     used_xrefs: list[tuple[str, str]] = []
+    used_footnotes: list[str] = []
     last_heading = 0
+
+    def _walk_inlines(children: tuple[n.Inline, ...]) -> None:
+        for child in children:
+            if isinstance(child, n.CrossRef):
+                used_xrefs.append((child.kind, child.identifier))
+            elif isinstance(child, n.FootnoteRef):
+                used_footnotes.append(child.key)
+            elif isinstance(child, (n.Strong, n.Emphasis, n.Strike, n.Link)):
+                _walk_inlines(child.children)
 
     for block in doc.blocks:
         if isinstance(block, n.Heading):
@@ -53,9 +54,11 @@ def validate_document(doc: n.Document, *, base_dir: Path) -> list[Issue]:
                     )
                 )
             last_heading = block.level
-            used_xrefs.extend(_collect_xrefs(block.children))
+            if block.anchor:
+                defined_sec.add(block.anchor.replace("sec:", ""))
+            _walk_inlines(block.children)
         elif isinstance(block, n.Paragraph):
-            used_xrefs.extend(_collect_xrefs(block.children))
+            _walk_inlines(block.children)
         elif isinstance(block, n.Image):
             if block.identifier:
                 defined_fig.add(block.identifier.replace("fig:", ""))
@@ -73,14 +76,19 @@ def validate_document(doc: n.Document, *, base_dir: Path) -> list[Issue]:
             if block.identifier:
                 defined_tbl.add(block.identifier.replace("tbl:", ""))
 
-    for key in doc.footnotes:
-        pass
+    for key in used_footnotes:
+        if key not in footnote_keys:
+            issues.append(
+                Issue("error", "unresolved_footnote", f"unresolved footnote reference: {key}")
+            )
 
     for kind, ident in used_xrefs:
         if kind == "fig" and ident not in defined_fig:
             issues.append(Issue("error", "unresolved_xref", f"unresolved fig reference: {ident}"))
         if kind == "tbl" and ident not in defined_tbl:
             issues.append(Issue("error", "unresolved_xref", f"unresolved tbl reference: {ident}"))
+        if kind == "sec" and ident not in defined_sec:
+            issues.append(Issue("error", "unresolved_xref", f"unresolved sec reference: {ident}"))
 
     return issues
 

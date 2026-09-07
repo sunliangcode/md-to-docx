@@ -61,3 +61,23 @@ def test_no_plugins_keeps_mermaid_codeblock(tmp_path: Path) -> None:
     code_blocks = [b for b in doc.blocks if isinstance(b, n.CodeBlock)]
     assert code_blocks
     assert "A --> B" in code_blocks[-1].text
+
+
+@pytest.mark.mermaid
+def test_mermaid_plugin_embeds_png(tmp_path: Path) -> None:
+    import zipfile
+
+    if not shutil.which("mmdc"):
+        pytest.skip("mmdc not on PATH")
+
+    md = tmp_path / "diagram.md"
+    md.write_text("```mermaid\ngraph LR\n  A --> B\n```\n")
+    out = tmp_path / "diagram.docx"
+    convert_native(
+        md,
+        out,
+        options=NativeOptions(template_path=native_reference_doc()),
+    )
+    with zipfile.ZipFile(out) as zf:
+        media = [n for n in zf.namelist() if n.startswith("word/media/")]
+    assert media, "expected embedded mermaid PNG in DOCX"

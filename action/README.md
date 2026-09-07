@@ -18,7 +18,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: sunliang11/md-to-docx/action@v1.1.0
+      - uses: sunliang11/md-to-docx/action@v1.1.1
         with:
           input: docs/report.md
           preset: technical
@@ -30,7 +30,7 @@ jobs:
           path: dist/docx
 ```
 
-Pin to `@v1.1.0` for this release, or `@v1` for the floating major tag (tracks the latest v1.x).
+Pin to `@v1.1.1` for this release, or `@v1` for the floating major tag (tracks the latest v1.x).
 
 ## Inputs
 

@@ -66,7 +66,7 @@ class MdToDocxPlugin extends Plugin {
         execFile(cli, args, (err, stdout, stderr) => {
           if (err) {
             const hint = (stderr || err.message || "").includes("ENOENT")
-              ? " — install: pip install md2docx-compiler"
+              ? ' — install: pip install "git+https://github.com/sunliang11/md-to-docx.git"'
               : "";
             new Notice(`md-to-docx failed${hint}`);
             console.error(stderr || err);

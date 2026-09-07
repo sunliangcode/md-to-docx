@@ -50,7 +50,8 @@ Preview is an AST HTML approximation, not Word layout.
 - Single upload (reverse / template / diff file) max **2MB**
 - Batch upload total max **10MB**, up to **50** Markdown files
 - Conversion timeout **30s** (batch **90s**)
-- Documents converted in temp storage and not persisted
+- Documents converted in unique temp files and deleted after download
+- **CORS:** by default, reflects `Origin` only when `Host` is loopback (so the browser extension on chatgpt.com can call local Playground safely). Set `MD_TO_DOCX_CORS_ORIGINS=*` or a comma-separated allow-list when binding publicly.
 
 ## Mermaid
 

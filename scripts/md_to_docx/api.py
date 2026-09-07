@@ -68,9 +68,13 @@ def apply_preset(
       options.template = preset_template_path(preset)
     except FileNotFoundError as exc:
       raise missing_template(str(exc)) from exc
-  options.figure_label = preset.figure_label
-  options.table_label = preset.table_label
-  options.toc_title = preset.toc_title
+  # Only fill labels / toc_title when still at ConvertOptions defaults.
+  if options.figure_label == "Figure":
+    options.figure_label = preset.figure_label
+  if options.table_label == "Table":
+    options.table_label = preset.table_label
+  if options.toc_title == "Contents":
+    options.toc_title = preset.toc_title
   return options
 
 

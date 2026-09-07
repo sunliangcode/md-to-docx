@@ -49,7 +49,7 @@ md-to-docx report.md --plugin examples/plugins/uppercase_headings.py
 | Plugin | Hook | Role |
 |--------|------|------|
 | `mermaid` | `render_assets` | `mmdc` → PNG in `{stem}-media/` |
-| `math` | — | Placeholder (math at parse/render) |
+| `math` | `transform` (no-op) | Math handled at parse/render (`render.omml`) |
 | `captions` | `transform` | Figure/table numbering |
 
 ## Example
@@ -62,3 +62,4 @@ See [`examples/plugins/uppercase_headings.py`](../examples/plugins/uppercase_hea
 - Plugins run **after** parse, **before** DOCX render
 - `reverse` does not load plugins (DOCX → MD path is parse-only)
 - No `setuptools` entry points yet (planned for P4)
+- **`--plugin PATH` executes arbitrary Python** with the same privileges as the CLI process. Only load plugins you trust (equivalent to running a local script). There is no sandbox or signature check.

@@ -38,6 +38,7 @@ exports.deactivate = deactivate;
 const vscode = __importStar(require("vscode"));
 const child_process_1 = require("child_process");
 const path = __importStar(require("path"));
+const INSTALL_HINT = ' Install with: pip install "git+https://github.com/sunliang11/md-to-docx.git"';
 function getConfig() {
     const cfg = vscode.workspace.getConfiguration("md-to-docx");
     return {
@@ -57,7 +58,8 @@ function runConvert(filePath) {
     channel.show(true);
     channel.appendLine(`> ${cli} ${args.join(" ")}`);
     return new Promise((resolve) => {
-        const proc = (0, child_process_1.spawn)(cli, args, { shell: true });
+        // shell: false — avoid command injection via configurable path/extraArgs
+        const proc = (0, child_process_1.spawn)(cli, args, { shell: false });
         let stderr = "";
         proc.stderr.on("data", (d) => {
             const text = d.toString();
@@ -65,6 +67,10 @@ function runConvert(filePath) {
             channel.append(text);
         });
         proc.stdout.on("data", (d) => channel.append(d.toString()));
+        proc.on("error", (err) => {
+            stderr += err.message;
+            resolve({ code: 1, stderr });
+        });
         proc.on("close", (code) => resolve({ code: code ?? 1, stderr }));
     });
 }
@@ -84,8 +90,10 @@ function activate(context) {
         }
         const { code, stderr } = await runConvert(filePath);
         if (code !== 0) {
-            const hint = stderr.includes("not found") || stderr.includes("ENOENT")
-                ? " Install with: pip install md2docx-compiler"
+            const hint = stderr.includes("not found") ||
+                stderr.includes("ENOENT") ||
+                stderr.includes("spawn")
+                ? INSTALL_HINT
                 : "";
             vscode.window.showErrorMessage(`md-to-docx failed (exit ${code}).${hint}`);
             return;

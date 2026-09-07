@@ -2,6 +2,7 @@
   const DEFAULTS = {
     endpoint: "http://127.0.0.1:8080",
     preset: "technical",
+    numbering: false,
     fallbackMd: true,
     showFloating: true,
   };
@@ -362,7 +363,8 @@
         body: JSON.stringify({
           markdown,
           preset: settings.preset,
-          toc: true,
+          // Omit toc so Playground/API follow the preset default.
+          numbering: !!settings.numbering,
         }),
       });
 

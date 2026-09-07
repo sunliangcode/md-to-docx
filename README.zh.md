@@ -26,10 +26,10 @@
 - ✓ **DOCX → Markdown** — `md-to-docx reverse report.docx`
 - ✓ **文档对比** — 按结构对比 `.md` 与 `.docx` 版本（[roundtrip](references/roundtrip.md)）
 - ✓ **模板** — 预设 + 社区 Word 模板（[presets](references/presets.md) · [templates](templates/README.md)）
-- ✓ **MCP** — convert、validate、apply_template、list_presets（[mcp](references/mcp.md)）
+- ✓ **MCP** — convert、validate、apply_template、list_presets、reverse、diff（[mcp](references/mcp.md)）
 - ✓ **Cursor / Claude / Codex / Gemini** — [SKILL.md](SKILL.md) · [skills/](skills/)
-- ✓ **浏览器扩展** — 从 ChatGPT / Claude / Gemini 对话导出 Word（[extension](browser-extension/README.md)）
-- ✓ **桌面右键** — Finder / 资源管理器对 `.md` ↔ `.docx` 一键转换（[desktop](desktop/README.zh.md)）
+- ○ **浏览器扩展** *(实验性)* — 从 ChatGPT / Claude / Gemini 对话导出 Word（[extension](browser-extension/README.md)）
+- ○ **桌面右键** *(实验性)* — Finder / 资源管理器对 `.md` ↔ `.docx` 一键转换（[desktop](desktop/README.zh.md)）
 - ✓ **GitHub Action** — CI 从 Markdown 构建 DOCX（[action](action/README.md)）
 - ✓ **本地 & 私有** — 无需 API Key，Docker 自托管
 
@@ -77,7 +77,9 @@ ChatGPT · Claude · Cursor · Codex · Gemini
 
 ### 生态
 
-[CLI](references/cli.zh.md) · [MCP](references/mcp.md) · [VS Code](editors/vscode/README.md) · [Obsidian](editors/obsidian/README.md) · [Browser](browser-extension/README.md) · [Desktop](desktop/README.zh.md) · [GitHub Action](action/README.md) · [Docker](web/README.md)
+**核心：** [CLI](references/cli.zh.md) · [MCP](references/mcp.md) · [GitHub Action](action/README.md) · [Docker Playground](web/README.md)
+
+**实验性**（需本地 CLI 或 Playground）：[VS Code](editors/vscode/README.md) · [Obsidian](editors/obsidian/README.md) · [Browser](browser-extension/README.md) · [Desktop](desktop/README.zh.md)
 
 ---
 
@@ -247,7 +249,7 @@ md-to-docx report.md         # 或 ./bin/convert report.md（免 pip）
 
 安装方式与入口说明：[命令手册 — 怎么运行命令](references/cli.zh.md#怎么运行命令)。
 
-**暂未发布 PyPI。** 计划包名：`md2docx-compiler` · 命令行：`md-to-docx`。请从源码安装，或使用 `pip install "git+https://github.com/sunliang11/md-to-docx.git"`。
+**暂未发布 PyPI。** 计划包名：`md2docx-compiler` · 命令行：`md-to-docx`。请从源码安装，或使用 `pip install "git+https://github.com/sunliang11/md-to-docx.git"`。首次发布后（见 [release.md](references/release.md)）即可 `pip install md2docx-compiler`。
 
 **Mermaid 说明：** 未安装 `mmdc` 时图表显示为源码代码块；可用 `--strict-mermaid` 强制失败。完整说明见 [installation.md](references/installation.md)。
 

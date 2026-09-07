@@ -9,7 +9,9 @@ import pytest
 
 from md_to_docx.mcp.handlers import (
     handle_convert_markdown,
+    handle_diff_documents,
     handle_list_presets,
+    handle_reverse_document,
     handle_validate_document,
 )
 
@@ -77,3 +79,32 @@ def test_path_jail_in_convert(tmp_path: Path):
     )
     assert result["ok"] is False
     assert "problem" in result
+
+
+def test_reverse_document(tmp_path: Path):
+    src = Path(__file__).parent / "fixtures" / "sample.md"
+    md = tmp_path / "sample.md"
+    shutil.copy(src, md)
+    docx = tmp_path / "sample.docx"
+    convert = handle_convert_markdown(
+        {"input_path": str(md), "output_path": str(docx), "preset": "professional"}
+    )
+    assert convert["ok"] is True
+    out_md = tmp_path / "back.md"
+    result = handle_reverse_document(
+        {"input_path": str(docx), "output_path": str(out_md)}
+    )
+    assert result["ok"] is True
+    assert out_md.is_file()
+    assert "#" in out_md.read_text(encoding="utf-8")
+
+
+def test_diff_documents(tmp_path: Path):
+    a = tmp_path / "a.md"
+    b = tmp_path / "b.md"
+    a.write_text("# A\n\nHello\n", encoding="utf-8")
+    b.write_text("# B\n\nHello\n", encoding="utf-8")
+    result = handle_diff_documents({"a": str(a), "b": str(b), "format": "text"})
+    assert result["ok"] is True
+    assert result["change_count"] >= 1
+    assert result["diff"]
