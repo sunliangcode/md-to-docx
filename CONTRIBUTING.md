@@ -28,7 +28,7 @@ Contributions are welcome across the shipped product surface:
 - GitHub Action, editor integrations, browser extension
 - Docs, examples, community templates under `templates/`
 
-Historical planning notes live under `aim/` (archived — not the active roadmap). See [references/roadmap.md](references/roadmap.md).
+Historical planning notes live under [`aim/HISTORY.md`](aim/HISTORY.md) (archived — not the active roadmap). See [references/roadmap.md](references/roadmap.md).
 
 ## Setup
 

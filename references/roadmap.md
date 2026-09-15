@@ -11,6 +11,6 @@
 | P3B | Plugin API + VS Code / Obsidian | Done |
 | P4 | Ecosystem, Document Standard, templates | Gate A done |
 
-Planning docs under [`aim/`](../aim/README.md) are **historical** (pre–native-only). Do not treat them as the active execution plan.
+Planning docs under [`aim/HISTORY.md`](../aim/HISTORY.md) are **historical** (pre–native-only). Do not treat them as the active execution plan.
 
 Use `./bin/convert`, `md-to-docx reverse`, or the [Web Playground](../web/README.md).
