@@ -2,61 +2,635 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <title>md-to-docx Extension Options</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>md-to-docx — Extension Options</title>
   <style>
-    body { font-family: system-ui, sans-serif; max-width: 520px; margin: 24px; }
-    label { display: block; margin: 12px 0 4px; font-weight: 600; }
-    label.row { font-weight: 400; display: flex; align-items: center; gap: 8px; }
-    input[type="url"], select { width: 100%; padding: 8px; font-size: 14px; box-sizing: border-box; }
-    button { margin-top: 16px; padding: 8px 16px; }
-    p.hint { color: #555; font-size: 13px; }
-    p.error { color: #b91c1c; font-size: 13px; }
+    :root {
+      color-scheme: light dark;
+      --bg: #ffffff;
+      --surface: #f4f5f7;
+      --border: #e5e7eb;
+      --border-strong: #d1d5db;
+      --ink: #111827;
+      --ink-muted: #6b7280;
+      --ink-faint: #9ca3af;
+      --accent: #2563eb;
+      --accent-hover: #1d4ed8;
+      --accent-soft: rgba(37, 99, 235, 0.12);
+      --success: #047857;
+      --success-bg: #ecfdf5;
+      --error: #b91c1c;
+      --error-bg: #fef2f2;
+      --error-border: #fecaca;
+      --switch-off: #cbd5e1;
+      --radius: 10px;
+      --radius-sm: 7px;
+      --ui: system-ui, -apple-system, "Segoe UI", sans-serif;
+      --mono: ui-monospace, "Cascadia Code", Menlo, monospace;
+      --ease: cubic-bezier(0.32, 0.72, 0, 1);
+      --shadow-card: 0 1px 2px rgba(17, 24, 39, 0.04);
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #16181d;
+        --surface: #0f1115;
+        --border: #2a2f3a;
+        --border-strong: #3b4252;
+        --ink: #f3f4f6;
+        --ink-muted: #9ca3af;
+        --ink-faint: #6b7280;
+        --accent: #3b82f6;
+        --accent-hover: #60a5fa;
+        --accent-soft: rgba(59, 130, 246, 0.22);
+        --success: #34d399;
+        --success-bg: rgba(6, 78, 59, 0.45);
+        --error: #f87171;
+        --error-bg: rgba(127, 29, 29, 0.4);
+        --error-border: #7f1d1d;
+        --switch-off: #4b5563;
+        --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.25);
+      }
+    }
+
+    *,
+    *::before,
+    *::after {
+      box-sizing: border-box;
+    }
+
+    html {
+      -webkit-font-smoothing: antialiased;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: var(--ui);
+      font-size: 14px;
+      line-height: 1.5;
+      color: var(--ink);
+      background: var(--surface);
+    }
+
+    .page {
+      max-width: 560px;
+      margin: 0 auto;
+      padding: 28px 20px 48px;
+    }
+
+    .header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 20px;
+    }
+
+    .header__text {
+      min-width: 0;
+      flex: 1;
+    }
+
+    .header__eyebrow {
+      margin: 0 0 6px;
+      font-size: 0.7rem;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--ink-faint);
+    }
+
+    .header__title {
+      margin: 0 0 8px;
+      font-size: 1.35rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      color: var(--ink);
+    }
+
+    .header__lead {
+      margin: 0;
+      font-size: 0.9rem;
+      color: var(--ink-muted);
+      max-width: 48ch;
+    }
+
+    .header__lead strong {
+      color: var(--ink);
+      font-weight: 600;
+    }
+
+    .lang-switch {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      flex-shrink: 0;
+      margin-top: 2px;
+    }
+
+    .lang-switch__btn {
+      padding: 4px 8px;
+      font-family: var(--ui);
+      font-size: 0.8rem;
+      font-weight: 500;
+      color: var(--ink-faint);
+      background: transparent;
+      border: none;
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+    }
+
+    .lang-switch__btn:hover {
+      color: var(--ink);
+      background: var(--bg);
+    }
+
+    .lang-switch__btn:focus-visible {
+      outline: 2px solid var(--accent);
+      outline-offset: 1px;
+    }
+
+    .lang-switch__btn--active {
+      font-weight: 600;
+      color: var(--ink);
+    }
+
+    .lang-switch__sep {
+      color: var(--border-strong);
+      font-size: 0.75rem;
+      user-select: none;
+    }
+
+    .card {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 20px;
+      margin-bottom: 12px;
+      box-shadow: var(--shadow-card);
+    }
+
+    .card__title {
+      margin: 0 0 14px;
+      font-size: 0.7rem;
+      font-weight: 600;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--ink-faint);
+    }
+
+    .field {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      margin-bottom: 14px;
+    }
+
+    .field:last-child {
+      margin-bottom: 0;
+    }
+
+    .field__label {
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--ink);
+    }
+
+    .field__hint {
+      margin: 0;
+      font-size: 0.8rem;
+      color: var(--ink-muted);
+      line-height: 1.4;
+    }
+
+    .field__control {
+      width: 100%;
+      padding: 9px 12px;
+      font-family: var(--ui);
+      font-size: 0.9rem;
+      color: var(--ink);
+      background: var(--bg);
+      border: 1px solid var(--border-strong);
+      border-radius: var(--radius-sm);
+      transition: border-color 0.15s var(--ease), box-shadow 0.15s var(--ease);
+    }
+
+    .field__control:hover {
+      border-color: var(--ink-faint);
+    }
+
+    .field__control:focus {
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px var(--accent-soft);
+    }
+
+    .field__control--error {
+      border-color: var(--error);
+      background: var(--error-bg);
+    }
+
+    .field__control--error:focus {
+      box-shadow: 0 0 0 3px rgba(185, 28, 28, 0.12);
+    }
+
+    .field__error {
+      margin: 0;
+      font-size: 0.8rem;
+      color: var(--error);
+    }
+
+    .field__error[hidden] {
+      display: none;
+    }
+
+    select.field__control {
+      cursor: pointer;
+      appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' fill='none'%3E%3Cpath d='M1 1.5 6 6.5 11 1.5' stroke='%236b7280' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 12px center;
+      padding-right: 36px;
+    }
+
+    .toggle {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      padding: 12px 14px;
+      margin: 0 0 8px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      transition: background 0.15s var(--ease), border-color 0.15s var(--ease);
+      user-select: none;
+    }
+
+    .toggle:last-of-type {
+      margin-bottom: 0;
+    }
+
+    .toggle:hover {
+      background: var(--surface);
+      border-color: var(--border-strong);
+    }
+
+    .toggle:focus-within {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px var(--accent-soft);
+    }
+
+    .toggle__body {
+      min-width: 0;
+      flex: 1;
+      order: 1;
+    }
+
+    .toggle__input {
+      order: 2;
+      appearance: none;
+      -webkit-appearance: none;
+      width: 40px;
+      height: 22px;
+      margin: 0;
+      flex-shrink: 0;
+      border-radius: 999px;
+      background: var(--switch-off);
+      border: none;
+      cursor: pointer;
+      position: relative;
+      transition: background 0.18s var(--ease);
+    }
+
+    .toggle__input::after {
+      content: "";
+      position: absolute;
+      top: 2px;
+      left: 2px;
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: #fff;
+      box-shadow: 0 1px 3px rgba(17, 24, 39, 0.28);
+      transition: transform 0.18s var(--ease);
+    }
+
+    .toggle__input:checked {
+      background: var(--accent);
+    }
+
+    .toggle__input:checked::after {
+      transform: translateX(18px);
+    }
+
+    .toggle__input:focus-visible {
+      outline: 2px solid var(--accent);
+      outline-offset: 2px;
+    }
+
+    .toggle__title {
+      display: block;
+      font-size: 0.875rem;
+      font-weight: 500;
+      color: var(--ink);
+      line-height: 1.35;
+    }
+
+    .toggle__desc {
+      display: block;
+      margin-top: 3px;
+      font-size: 0.8rem;
+      color: var(--ink-muted);
+      line-height: 1.4;
+    }
+
+    .actions {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-top: 4px;
+    }
+
+    .actions__meta {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      min-width: 0;
+      flex: 1;
+    }
+
+    .dirty {
+      margin: 0;
+      font-size: 0.75rem;
+      color: var(--ink-faint);
+      min-height: 1.1em;
+    }
+
+    .dirty--on {
+      color: var(--ink-muted);
+    }
+
+    .shortcut-hint {
+      margin: 0;
+      font-size: 0.75rem;
+      color: var(--ink-faint);
+    }
+
+    .shortcut-hint kbd {
+      display: inline-block;
+      padding: 1px 5px;
+      font-family: var(--mono);
+      font-size: 0.7rem;
+      border: 1px solid var(--border-strong);
+      border-radius: 4px;
+      background: var(--bg);
+      color: var(--ink-muted);
+      line-height: 1.3;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      min-height: 40px;
+      padding: 8px 18px;
+      font-family: var(--ui);
+      font-size: 0.875rem;
+      font-weight: 600;
+      border-radius: var(--radius-sm);
+      border: 1px solid transparent;
+      cursor: pointer;
+      transition: background 0.15s var(--ease), border-color 0.15s var(--ease), transform 0.1s var(--ease);
+      position: relative;
+    }
+
+    .btn:focus-visible {
+      outline: 2px solid var(--accent);
+      outline-offset: 2px;
+    }
+
+    .btn:active:not(:disabled) {
+      transform: scale(0.98);
+    }
+
+    .btn:disabled {
+      opacity: 0.65;
+      cursor: not-allowed;
+    }
+
+    .btn--primary {
+      color: #fff;
+      background: var(--accent);
+      border-color: var(--accent);
+    }
+
+    .btn--primary:hover:not(:disabled) {
+      background: var(--accent-hover);
+      border-color: var(--accent-hover);
+    }
+
+    .btn--secondary {
+      color: var(--ink);
+      background: var(--bg);
+      border-color: var(--border-strong);
+    }
+
+    .btn--secondary:hover:not(:disabled) {
+      background: var(--surface);
+      border-color: var(--ink-faint);
+    }
+
+    .btn--loading .btn__label {
+      visibility: hidden;
+    }
+
+    .btn--loading::after {
+      content: "";
+      position: absolute;
+      width: 16px;
+      height: 16px;
+      border: 2px solid rgba(255, 255, 255, 0.35);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+    }
+
+    .btn--secondary.btn--loading::after {
+      border-color: rgba(107, 114, 128, 0.35);
+      border-top-color: var(--ink);
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    .status {
+      margin: 0;
+      font-size: 0.85rem;
+      color: var(--ink-muted);
+      min-height: 1.25em;
+    }
+
+    .status--ok {
+      color: var(--success);
+      background: var(--success-bg);
+      padding: 6px 10px;
+      border-radius: var(--radius-sm);
+    }
+
+    .status--err {
+      color: var(--error);
+      background: var(--error-bg);
+      padding: 6px 10px;
+      border-radius: var(--radius-sm);
+    }
+
+    .footer-hint {
+      margin: 16px 0 0;
+      padding: 12px 14px;
+      font-size: 0.8rem;
+      color: var(--ink-muted);
+      background: var(--bg);
+      border: 1px dashed var(--border-strong);
+      border-radius: var(--radius-sm);
+      line-height: 1.45;
+    }
+
+    .footer-hint code {
+      font-family: var(--mono);
+      font-size: 0.78rem;
+      padding: 1px 5px;
+      background: var(--surface);
+      border-radius: 4px;
+      color: var(--ink);
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *,
+      *::before,
+      *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+      }
+    }
   </style>
 </head>
 <body>
-  <h1>md-to-docx Export</h1>
-  <p class="hint">Conversion runs on your local Playground — content is sent only to a <strong>loopback</strong> endpoint below. When Playground is offline, buttons show <strong>Export MD</strong> and download Markdown (if fallback is enabled).</p>
+  <div class="page">
+    <header class="header">
+      <div class="header__text">
+        <p class="header__eyebrow" data-i18n="eyebrow">Browser extension</p>
+        <h1 class="header__title" data-i18n="title">md-to-docx Export</h1>
+        <p class="header__lead" data-i18n-html="lead">
+          Conversion runs on your local Playground — content is sent only to a
+          <strong>loopback</strong> endpoint. When Playground is offline, buttons can fall back to
+          <strong>Export MD</strong>.
+        </p>
+      </div>
+      <div class="lang-switch" role="group" id="lang-switch" aria-label="Language">
+        <button type="button" id="lang-en" class="lang-switch__btn" data-lang="en" aria-pressed="false">EN</button>
+        <span class="lang-switch__sep" aria-hidden="true">|</span>
+        <button type="button" id="lang-zh" class="lang-switch__btn" data-lang="zh" aria-pressed="false">中文</button>
+      </div>
+    </header>
 
-  <label for="endpoint">Convert endpoint URL (localhost only)</label>
-  <input id="endpoint" type="url" placeholder="http://127.0.0.1:8080">
-  <p id="endpointError" class="error" hidden></p>
+    <form id="options-form" novalidate>
+      <section class="card" aria-labelledby="sec-connection">
+        <h2 class="card__title" id="sec-connection" data-i18n="secConnection">Connection</h2>
+        <div class="field">
+          <label class="field__label" for="endpoint" data-i18n="endpointLabel">Convert endpoint URL</label>
+          <input
+            id="endpoint"
+            class="field__control"
+            type="url"
+            name="endpoint"
+            placeholder="http://127.0.0.1:8080"
+            value="http://127.0.0.1:8080"
+            autocomplete="off"
+            spellcheck="false"
+            required
+            aria-describedby="endpoint-hint endpointError"
+            aria-invalid="false"
+          >
+          <p class="field__hint" id="endpoint-hint" data-i18n="endpointHint">Localhost only — keeps chat content on your machine.</p>
+          <p id="endpointError" class="field__error" role="alert" hidden></p>
+        </div>
+        <div class="field">
+          <label class="field__label" for="preset" data-i18n="presetLabel">Default preset</label>
+          <select id="preset" class="field__control" name="preset">
+            <option value="technical">technical</option>
+            <option value="professional">professional</option>
+            <option value="academic">academic</option>
+            <option value="business">business</option>
+            <option value="report">report</option>
+            <option value="editorial">editorial</option>
+          </select>
+        </div>
+      </section>
 
-  <label for="preset">Default preset</label>
-  <select id="preset">
-    <option value="technical">technical</option>
-    <option value="professional">professional</option>
-    <option value="academic">academic</option>
-    <option value="business">business</option>
-    <option value="report">report</option>
-    <option value="editorial">editorial</option>
-  </select>
+      <section class="card" aria-labelledby="sec-export">
+        <h2 class="card__title" id="sec-export" data-i18n="secExport">Export behavior</h2>
+        <label class="toggle">
+          <span class="toggle__body">
+            <span class="toggle__title" data-i18n="numberingTitle">Heading numbering</span>
+            <span class="toggle__desc" data-i18n="numberingDesc">Overrides the preset when checked.</span>
+          </span>
+          <input type="checkbox" class="toggle__input" id="numbering" role="switch">
+        </label>
+        <label class="toggle">
+          <span class="toggle__body">
+            <span class="toggle__title" data-i18n="fallbackTitle">Download .md if convert fails</span>
+            <span class="toggle__desc" data-i18n="fallbackDesc">Also used when Playground is offline.</span>
+          </span>
+          <input type="checkbox" class="toggle__input" id="fallbackMd" role="switch" checked>
+        </label>
+      </section>
 
-  <label class="row">
-    <input type="checkbox" id="numbering">
-    Heading numbering (overrides preset when checked)
-  </label>
+      <section class="card" aria-labelledby="sec-ui">
+        <h2 class="card__title" id="sec-ui" data-i18n="secUi">On-page UI</h2>
+        <label class="toggle">
+          <span class="toggle__body">
+            <span class="toggle__title" data-i18n="floatingTitle">Show floating export button</span>
+            <span class="toggle__desc" data-i18n="floatingDesc">Circular launcher on AI chat pages. Click to open the sheet; drag to move.</span>
+          </span>
+          <input type="checkbox" class="toggle__input" id="showFloating" role="switch" checked>
+        </label>
+        <label class="toggle">
+          <span class="toggle__body">
+            <span class="toggle__title" data-i18n="webpageTitle">Enable webpage export on all sites</span>
+            <span class="toggle__desc" data-i18n="webpageDesc">Off by default. Chrome will ask for access to all websites when you turn this on.</span>
+          </span>
+          <input type="checkbox" class="toggle__input" id="enableWebpageExport" role="switch">
+        </label>
+      </section>
 
-  <label class="row">
-    <input type="checkbox" id="fallbackMd" checked>
-    Download .md if convert fails / Playground offline
-  </label>
+      <div class="actions">
+        <button type="submit" id="save" class="btn btn--primary" disabled>
+          <span class="btn__label" data-i18n="btnSave">Save</span>
+        </button>
+        <button type="button" id="test" class="btn btn--secondary">
+          <span class="btn__label" data-i18n="btnTest">Test connection</span>
+        </button>
+        <button type="button" id="reset" class="btn btn--secondary">
+          <span class="btn__label" data-i18n="btnReset">Reset</span>
+        </button>
+        <div class="actions__meta">
+          <p id="dirty" class="dirty" aria-live="polite"></p>
+          <p id="status" class="status" role="status" aria-live="polite"></p>
+          <p class="shortcut-hint" id="shortcut-hint"></p>
+        </div>
+      </div>
+    </form>
 
-  <label class="row">
-    <input type="checkbox" id="showFloating" checked>
-    Show floating export button on AI chat pages
-  </label>
-  <p class="hint">On by default as a framed circular launcher — click to open the export sheet. Drag to move. Uncheck to remove entirely.</p>
-
-  <label class="row">
-    <input type="checkbox" id="enableWebpageExport">
-    Enable webpage export on all sites (optional)
-  </label>
-  <p class="hint">Off by default. When enabled, Chrome will ask for access to all websites so the floating button can appear outside AI chat hosts.</p>
-
-  <button type="button" id="save">Save</button>
-  <p id="status"></p>
-
-  <p class="hint">Start Playground: <code>docker compose -f web/docker-compose.yml up --build</code></p>
+    <p class="footer-hint">
+      <span data-i18n="footerStart">Start Playground:</span>
+      <code>docker compose -f web/docker-compose.yml up --build</code>
+    </p>
+  </div>
 
   <script src="options.js"></script>
 </body>

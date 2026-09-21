@@ -8,14 +8,49 @@
   --md-blue-dark: #0550ae;
   --md-ink: #111827;
   --md-muted: #64748b;
+  --md-surface: #ffffff;
+  --md-surface-hover: rgba(17, 24, 39, 0.04);
+  --md-surface-active: rgba(17, 24, 39, 0.06);
+  --md-row-hover: rgba(9, 105, 218, 0.06);
   --md-border: rgba(17, 24, 39, 0.08);
+  --md-border-strong: rgba(17, 24, 39, 0.16);
   --md-shadow: 0 8px 24px rgba(17, 24, 39, 0.12);
   --md-shadow-hover: 0 10px 28px rgba(17, 24, 39, 0.16);
+  --md-backdrop: rgba(17, 24, 39, 0.28);
+  --md-ring: rgba(9, 105, 218, 0.28);
+  --md-status-border: #ffffff;
   --md-online: #22c55e;
   --md-offline: #94a3b8;
   --md-radius-btn: 8px;
   --md-radius-sheet: 12px;
   --md-font: system-ui, -apple-system, sans-serif;
+  color-scheme: light dark;
+}
+
+@media (prefers-color-scheme: dark) {
+  .md-to-docx-export-btn,
+  .md-to-docx-float,
+  .md-to-docx-toast,
+  .md-to-docx-batch-float,
+  .md-to-docx-batch-panel,
+  .md-to-docx-batch-backdrop {
+    --md-blue: #4493f8;
+    --md-blue-dark: #58a6ff;
+    --md-ink: #f3f4f6;
+    --md-muted: #9ca3af;
+    --md-surface: #1c2128;
+    --md-surface-hover: rgba(255, 255, 255, 0.06);
+    --md-surface-active: rgba(255, 255, 255, 0.1);
+    --md-row-hover: rgba(68, 147, 248, 0.14);
+    --md-border: rgba(255, 255, 255, 0.12);
+    --md-border-strong: rgba(255, 255, 255, 0.2);
+    --md-shadow: 0 8px 28px rgba(0, 0, 0, 0.45);
+    --md-shadow-hover: 0 12px 32px rgba(0, 0, 0, 0.55);
+    --md-backdrop: rgba(0, 0, 0, 0.55);
+    --md-ring: rgba(68, 147, 248, 0.35);
+    --md-status-border: #1c2128;
+    --md-offline: #6b7280;
+  }
 }
 
 .md-to-docx-export-btn {
@@ -41,9 +76,42 @@
   background: var(--md-blue-dark);
 }
 
+.md-to-docx-export-btn:active:not(:disabled) {
+  transform: scale(0.98);
+}
+
+.md-to-docx-export-btn:focus-visible {
+  outline: 2px solid var(--md-blue);
+  outline-offset: 2px;
+}
+
 .md-to-docx-export-btn:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+}
+
+.md-to-docx-export-btn.md-to-docx-export-btn--busy {
+  opacity: 0.85;
+  cursor: wait;
+  position: relative;
+}
+
+.md-to-docx-export-btn.md-to-docx-export-btn--busy::after {
+  content: "";
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  width: 12px;
+  height: 12px;
+  margin-top: -6px;
+  border: 2px solid rgba(255, 255, 255, 0.35);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: md-to-docx-spin 0.7s linear infinite;
+}
+
+@keyframes md-to-docx-spin {
+  to { transform: rotate(360deg); }
 }
 
 .md-to-docx-md-badge {
@@ -100,7 +168,7 @@
   padding: 0;
   border: 1px solid var(--md-border);
   border-radius: 50%;
-  background: #fff;
+  background: var(--md-surface);
   box-shadow: var(--md-shadow);
   display: inline-flex;
   align-items: center;
@@ -119,6 +187,10 @@
   outline: none;
 }
 
+.md-to-docx-float-launcher:focus-visible {
+  box-shadow: var(--md-shadow-hover), 0 0 0 3px var(--md-ring);
+}
+
 .md-to-docx-float.md-to-docx-float-dragging .md-to-docx-float-launcher {
   cursor: grabbing;
   transform: scale(1.02);
@@ -132,13 +204,14 @@
   height: 8px;
   border-radius: 50%;
   background: var(--md-offline);
-  border: 1.5px solid #fff;
+  border: 1.5px solid var(--md-status-border);
   box-sizing: border-box;
   pointer-events: none;
 }
 
 .md-to-docx-float-status[data-online="1"] {
   background: var(--md-online);
+  box-shadow: 0 0 0 2px rgba(34, 197, 94, 0.2);
 }
 
 .md-to-docx-float-sheet {
@@ -147,7 +220,7 @@
   bottom: calc(100% + 12px);
   width: 212px;
   padding: 12px;
-  background: #fff;
+  background: var(--md-surface);
   border: 1px solid var(--md-border);
   border-radius: var(--md-radius-sheet);
   box-shadow: var(--md-shadow);
@@ -208,8 +281,13 @@
 }
 
 .md-to-docx-float-sheet-close:hover {
-  background: rgba(17, 24, 39, 0.06);
+  background: var(--md-surface-active);
   color: var(--md-ink);
+}
+
+.md-to-docx-float-sheet-close:focus-visible {
+  outline: 2px solid var(--md-blue);
+  outline-offset: 2px;
 }
 
 .md-to-docx-float-action {
@@ -234,6 +312,15 @@
 
 .md-to-docx-float-action:hover {
   background: var(--md-blue-dark) !important;
+}
+
+.md-to-docx-float-action:active:not(:disabled) {
+  transform: scale(0.98);
+}
+
+.md-to-docx-float-action:focus-visible {
+  outline: 2px solid var(--md-blue);
+  outline-offset: 2px;
 }
 
 .md-to-docx-float-action .md-to-docx-md-badge {
@@ -268,10 +355,40 @@
   color: #fff;
   border-radius: 8px;
   font-size: 13px;
+  line-height: 1.4;
   z-index: 2147483647;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.22);
   font-family: var(--md-font);
   box-sizing: border-box;
+  opacity: 0;
+  transform: translateY(8px);
+  transition:
+    opacity 0.2s cubic-bezier(0.32, 0.72, 0, 1),
+    transform 0.2s cubic-bezier(0.32, 0.72, 0, 1);
+  border-left: 3px solid transparent;
+}
+
+.md-to-docx-toast.md-to-docx-toast--visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.md-to-docx-toast.md-to-docx-toast--leaving {
+  opacity: 0;
+  transform: translateY(6px);
+}
+
+.md-to-docx-toast.md-to-docx-toast--ok {
+  border-left-color: #22c55e;
+}
+
+.md-to-docx-toast.md-to-docx-toast--err {
+  border-left-color: #f87171;
+  background: #2a1515;
+}
+
+.md-to-docx-toast.md-to-docx-toast--info {
+  border-left-color: #60a5fa;
 }
 
 /* Batch FAB — mirrors bottom-right MD float, anchored left */
@@ -299,7 +416,7 @@
   padding: 0;
   border: 1px solid var(--md-border);
   border-radius: 50%;
-  background: #fff;
+  background: var(--md-surface);
   box-shadow: var(--md-shadow);
   display: inline-flex;
   align-items: center;
@@ -316,6 +433,10 @@
   transform: scale(1.06);
   box-shadow: var(--md-shadow-hover);
   outline: none;
+}
+
+.md-to-docx-batch-launcher:focus-visible {
+  box-shadow: var(--md-shadow-hover), 0 0 0 3px var(--md-ring);
 }
 
 .md-to-docx-batch-float.md-to-docx-batch-float-dragging .md-to-docx-batch-launcher {
@@ -347,7 +468,7 @@
   line-height: 18px;
   text-align: center;
   box-sizing: border-box;
-  border: 1.5px solid #fff;
+  border: 1.5px solid var(--md-status-border);
   pointer-events: none;
 }
 
@@ -361,7 +482,7 @@
   bottom: calc(100% + 12px);
   width: 232px;
   padding: 12px;
-  background: #fff;
+  background: var(--md-surface);
   border: 1px solid var(--md-border);
   border-radius: var(--md-radius-sheet);
   box-shadow: var(--md-shadow);
@@ -422,8 +543,13 @@
 }
 
 .md-to-docx-batch-sheet-close:hover {
-  background: rgba(17, 24, 39, 0.06);
+  background: var(--md-surface-active);
   color: var(--md-ink);
+}
+
+.md-to-docx-batch-sheet-close:focus-visible {
+  outline: 2px solid var(--md-blue);
+  outline-offset: 2px;
 }
 
 .md-to-docx-batch-count-line {
@@ -439,10 +565,46 @@
   color: var(--md-muted);
 }
 
+.md-to-docx-batch-progress {
+  margin: 0 0 10px;
+}
+
+.md-to-docx-batch-progress[hidden] {
+  display: none !important;
+}
+
+.md-to-docx-batch-progress-track {
+  height: 4px;
+  border-radius: 999px;
+  background: var(--md-border-strong);
+  overflow: hidden;
+}
+
+.md-to-docx-batch-progress-bar {
+  height: 100%;
+  width: 0%;
+  border-radius: inherit;
+  background: var(--md-blue);
+  transition: width 0.25s cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+.md-to-docx-batch-progress-label {
+  margin: 6px 0 0;
+  font-size: 11px;
+  line-height: 1.35;
+  color: var(--md-muted);
+  word-break: break-word;
+}
+
 .md-to-docx-batch-actions {
   display: flex;
   flex-direction: column;
   gap: 8px;
+}
+
+.md-to-docx-batch-float.md-to-docx-batch-exporting .md-to-docx-batch-actions {
+  opacity: 0.55;
+  pointer-events: none;
 }
 
 .md-to-docx-batch-btn-secondary {
@@ -454,7 +616,7 @@
   line-height: 1.2;
   border: 1px solid var(--md-border);
   border-radius: var(--md-radius-btn);
-  background: #fff;
+  background: var(--md-surface);
   color: var(--md-ink);
   cursor: pointer;
   width: 100%;
@@ -463,8 +625,17 @@
 }
 
 .md-to-docx-batch-btn-secondary:hover {
-  background: rgba(17, 24, 39, 0.04);
-  border-color: rgba(17, 24, 39, 0.16);
+  background: var(--md-surface-hover);
+  border-color: var(--md-border-strong);
+}
+
+.md-to-docx-batch-btn-secondary:active:not(:disabled) {
+  transform: scale(0.98);
+}
+
+.md-to-docx-batch-btn-secondary:focus-visible {
+  outline: 2px solid var(--md-blue);
+  outline-offset: 2px;
 }
 
 .md-to-docx-batch-sheet .md-to-docx-export-btn {
@@ -478,7 +649,13 @@
   position: fixed;
   inset: 0;
   z-index: 2147483644;
-  background: rgba(17, 24, 39, 0.28);
+  background: var(--md-backdrop);
+  opacity: 0;
+  transition: opacity 0.18s cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+.md-to-docx-batch-backdrop.md-to-docx-batch-backdrop--visible {
+  opacity: 1;
 }
 
 .md-to-docx-batch-panel {
@@ -490,7 +667,7 @@
   max-height: min(420px, calc(100vh - 120px));
   display: flex;
   flex-direction: column;
-  background: #fff;
+  background: var(--md-surface);
   border: 1px solid var(--md-border);
   border-radius: 12px;
   box-shadow: var(--md-shadow);
@@ -498,6 +675,16 @@
   color: var(--md-ink);
   box-sizing: border-box;
   overflow: hidden;
+  opacity: 0;
+  transform: translateY(8px) scale(0.98);
+  transition:
+    opacity 0.18s cubic-bezier(0.32, 0.72, 0, 1),
+    transform 0.18s cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+.md-to-docx-batch-panel.md-to-docx-batch-panel--visible {
+  opacity: 1;
+  transform: translateY(0) scale(1);
 }
 
 .md-to-docx-batch-panel[hidden],
@@ -537,8 +724,13 @@
 }
 
 .md-to-docx-batch-panel-close:hover {
-  background: rgba(17, 24, 39, 0.06);
+  background: var(--md-surface-active);
   color: var(--md-ink);
+}
+
+.md-to-docx-batch-panel-close:focus-visible {
+  outline: 2px solid var(--md-blue);
+  outline-offset: 2px;
 }
 
 .md-to-docx-batch-panel-body {
@@ -566,7 +758,7 @@
 }
 
 .md-to-docx-batch-row:hover {
-  background: rgba(9, 105, 218, 0.06);
+  background: var(--md-row-hover);
 }
 
 .md-to-docx-batch-row-cb {
@@ -600,6 +792,14 @@
   padding: 10px 12px 12px;
   border-top: 1px solid var(--md-border);
   flex-shrink: 0;
+  flex-wrap: wrap;
+}
+
+.md-to-docx-batch-panel-footer-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
 }
 
 .md-to-docx-batch-panel-footer .md-to-docx-batch-btn-secondary {
@@ -608,4 +808,45 @@
 
 .md-to-docx-batch-panel-footer .md-to-docx-export-btn {
   margin-left: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .md-to-docx-export-btn,
+  .md-to-docx-float-launcher,
+  .md-to-docx-float-sheet,
+  .md-to-docx-float-sheet-close,
+  .md-to-docx-batch-launcher,
+  .md-to-docx-batch-sheet,
+  .md-to-docx-batch-sheet-close,
+  .md-to-docx-batch-btn-secondary,
+  .md-to-docx-float-action,
+  .md-to-docx-toast,
+  .md-to-docx-batch-backdrop,
+  .md-to-docx-batch-panel,
+  .md-to-docx-batch-progress-bar {
+    transition: none !important;
+  }
+
+  .md-to-docx-toast,
+  .md-to-docx-toast.md-to-docx-toast--visible,
+  .md-to-docx-toast.md-to-docx-toast--leaving,
+  .md-to-docx-batch-backdrop.md-to-docx-batch-backdrop--visible,
+  .md-to-docx-batch-panel.md-to-docx-batch-panel--visible {
+    opacity: 1;
+    transform: none;
+  }
+
+  .md-to-docx-float-launcher:hover,
+  .md-to-docx-float-launcher:focus-visible,
+  .md-to-docx-batch-launcher:hover,
+  .md-to-docx-batch-launcher:focus-visible,
+  .md-to-docx-float.md-to-docx-float-dragging .md-to-docx-float-launcher,
+  .md-to-docx-batch-float.md-to-docx-batch-float-dragging .md-to-docx-batch-launcher {
+    transform: none;
+  }
+
+  .md-to-docx-export-btn.md-to-docx-export-btn--busy::after {
+    animation: none !important;
+    border-color: rgba(255, 255, 255, 0.55);
+  }
 }

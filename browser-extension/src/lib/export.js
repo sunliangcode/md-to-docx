@@ -7,6 +7,13 @@
     showFloating: true,
   };
 
+  function t(key, vars) {
+    if (global.MdToDocxI18n && typeof global.MdToDocxI18n.t === "function") {
+      return global.MdToDocxI18n.t(key, vars);
+    }
+    return key;
+  }
+
   function isLoopbackEndpoint(url) {
     try {
       const u = new URL(url);
@@ -28,8 +35,6 @@
     return isLoopbackEndpoint(raw) ? raw : DEFAULTS.endpoint;
   }
 
-  const LABEL_WORD = "Export to Word";
-  const LABEL_MD = "Export MD";
   const PROBE_TTL_MS = 30000;
   const DRAG_THRESHOLD = 4;
 
@@ -68,15 +73,36 @@
     el.style.top = top + "px";
   }
 
-  function showToast(message, anchor) {
+  function showToast(message, anchor, kind) {
     const existing = document.querySelector(".md-to-docx-toast");
     if (existing) existing.remove();
     const el = document.createElement("div");
-    el.className = "md-to-docx-toast";
+    const tone = kind === "ok" || kind === "err" ? kind : "info";
+    el.className = "md-to-docx-toast md-to-docx-toast--" + tone;
+    el.setAttribute("role", tone === "err" ? "alert" : "status");
+    el.setAttribute("aria-live", tone === "err" ? "assertive" : "polite");
     el.textContent = message;
+    el.style.cursor = "pointer";
+    el.title = t("dismiss");
+    el.addEventListener("click", () => {
+      el.classList.remove("md-to-docx-toast--visible");
+      el.classList.add("md-to-docx-toast--leaving");
+      setTimeout(() => el.remove(), 220);
+    });
     document.body.appendChild(el);
-    positionToastNearAnchor(el, anchor);
-    setTimeout(() => el.remove(), 6000);
+    positionToastNearAnchor(el, anchor && anchor.getBoundingClientRect ? anchor : null);
+    requestAnimationFrame(() => {
+      el.classList.add("md-to-docx-toast--visible");
+    });
+    setTimeout(() => {
+      el.classList.remove("md-to-docx-toast--visible");
+      el.classList.add("md-to-docx-toast--leaving");
+      setTimeout(() => el.remove(), 220);
+    }, 5600);
+  }
+
+  function showToastKey(key, kind, vars) {
+    showToast(t(key, vars), null, kind || "err");
   }
 
   function downloadBlob(blob, filename) {
@@ -120,9 +146,9 @@
     } catch (_) {}
   }
 
-  function handleDeadContext(toastMsg) {
+  function handleDeadContext(toastMsg, kind) {
     removeStaleFloatUi();
-    showToast(toastMsg || "Extension was updated — refresh this page");
+    showToast(toastMsg || t("extUpdated"), null, kind || "err");
   }
 
   async function getSettings() {
@@ -196,11 +222,11 @@
   }
 
   function exportLabel(online) {
-    return online ? LABEL_WORD : LABEL_MD;
+    return online ? t("labelWord") : t("labelMd");
   }
 
   function exportHint(online) {
-    return online ? "Local Playground" : "Download Markdown";
+    return online ? t("hintOnline") : t("hintOffline");
   }
 
   function createCloseSvg() {
@@ -229,6 +255,72 @@
     return badge;
   }
 
+  function getFocusable(root) {
+    if (!root) return [];
+    return Array.prototype.slice
+      .call(
+        root.querySelectorAll(
+          'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+        )
+      )
+      .filter(function (el) {
+        return !el.hasAttribute("disabled") && el.getAttribute("aria-hidden") !== "true";
+      });
+  }
+
+  function trapFocus(root, e) {
+    const items = getFocusable(root);
+    if (!items.length) return;
+    const first = items[0];
+    const last = items[items.length - 1];
+    if (e.shiftKey && document.activeElement === first) {
+      e.preventDefault();
+      last.focus();
+    } else if (!e.shiftKey && document.activeElement === last) {
+      e.preventDefault();
+      first.focus();
+    }
+  }
+
+  function focusFirst(root) {
+    const items = getFocusable(root);
+    if (!items.length) return;
+    try {
+      items[0].focus();
+    } catch (_) {}
+  }
+
+  function restoreFocus(el, fallback) {
+    const target = el && typeof el.focus === "function" ? el : fallback;
+    if (!target || typeof target.focus !== "function") return;
+    try {
+      target.focus();
+    } catch (_) {}
+  }
+
+  function setExportBusy(busy) {
+    const on = !!busy;
+    trackedButtons.forEach(function (btn) {
+      if (!btn || !btn.isConnected) return;
+      btn.disabled = on;
+      btn.setAttribute("aria-busy", on ? "true" : "false");
+      btn.classList.toggle("md-to-docx-export-btn--busy", on);
+      if (on) {
+        if (!btn.dataset.mdIdleLabel) {
+          const labelEl = btn.querySelector(".md-to-docx-float-label, .md-to-docx-btn-label");
+          btn.dataset.mdIdleLabel = labelEl ? labelEl.textContent : btn.textContent || "";
+        }
+        setButtonLabel(btn, t("exporting"));
+      } else if (btn.dataset.mdIdleLabel) {
+        setButtonLabel(btn, btn.dataset.mdIdleLabel);
+        delete btn.dataset.mdIdleLabel;
+      }
+    });
+    if (!on) {
+      probeEndpoint(false).catch(function () {});
+    }
+  }
+
   function setButtonLabel(btn, label) {
     const labelEl = btn.querySelector(".md-to-docx-float-label, .md-to-docx-btn-label");
     if (labelEl) {
@@ -242,15 +334,27 @@
     const wrap = document.querySelector(".md-to-docx-float");
     if (!wrap) return;
     const status = wrap.querySelector(".md-to-docx-float-status");
-    if (status) status.dataset.online = online ? "1" : "0";
+    if (status) {
+      status.dataset.online = online ? "1" : "0";
+      status.title = online ? t("statusOnline") : t("statusOffline");
+    }
     const hint = wrap.querySelector(".md-to-docx-float-hint");
     if (hint) hint.textContent = exportHint(online);
     const launcher = wrap.querySelector(".md-to-docx-float-launcher");
     if (launcher) {
-      const tip = exportLabel(online) + " (drag to move)";
+      const tip = t("dragToMove", { label: exportLabel(online) });
       launcher.title = tip;
       launcher.setAttribute("aria-label", tip);
     }
+    const title = wrap.querySelector(".md-to-docx-float-sheet-title");
+    if (title) title.textContent = t("exportTitle");
+    const close = wrap.querySelector(".md-to-docx-float-sheet-close");
+    if (close) {
+      close.setAttribute("aria-label", t("close"));
+      close.title = t("close");
+    }
+    const sheet = wrap.querySelector(".md-to-docx-float-sheet");
+    if (sheet) sheet.setAttribute("aria-label", t("exportTitle"));
   }
 
   function refreshTrackedLabels(online) {
@@ -309,6 +413,15 @@
   }
 
   async function convertAndDownload(markdown, title) {
+    setExportBusy(true);
+    try {
+      await convertAndDownloadInner(markdown, title);
+    } finally {
+      setExportBusy(false);
+    }
+  }
+
+  async function convertAndDownloadInner(markdown, title) {
     const safeTitle = global.MdToDocxExtract.sanitizeTitle(title);
     let settings = { ...DEFAULTS };
     let dead = !isExtensionAlive();
@@ -323,7 +436,8 @@
       if (settings.fallbackMd !== false) {
         downloadText(markdown, safeTitle + ".md");
         handleDeadContext(
-          "Downloaded " + safeTitle + ".md — extension was updated, refresh this page"
+          t("downloadedMdUpdated", { file: safeTitle + ".md" }),
+          "info"
         );
       } else {
         handleDeadContext();
@@ -339,7 +453,8 @@
       if (isContextError(err)) {
         downloadText(markdown, safeTitle + ".md");
         handleDeadContext(
-          "Downloaded " + safeTitle + ".md — extension was updated, refresh this page"
+          t("downloadedMdUpdated", { file: safeTitle + ".md" }),
+          "info"
         );
         return;
       }
@@ -349,9 +464,9 @@
     if (!online) {
       if (settings.fallbackMd) {
         downloadText(markdown, safeTitle + ".md");
-        showToast("Downloaded " + safeTitle + ".md (Playground offline)");
+        showToast(t("downloadedMdOffline", { file: safeTitle + ".md" }), null, "info");
       } else {
-        showToast("Playground offline. Enable MD fallback in extension options.");
+        showToast(t("offlineEnableFallback"), null, "err");
       }
       return;
     }
@@ -369,7 +484,7 @@
       });
 
       if (!res.ok) {
-        let detail = "Convert failed";
+        let detail = t("exportFailed");
         try {
           const json = await res.json();
           detail = json.detail?.problem || json.detail?.cause || JSON.stringify(json.detail);
@@ -381,13 +496,14 @@
 
       const blob = await res.blob();
       downloadBlob(blob, safeTitle + ".docx");
-      showToast("Downloaded " + safeTitle + ".docx");
+      showToast(t("downloadedDocx", { file: safeTitle + ".docx" }), null, "ok");
       refreshTrackedLabels(true);
     } catch (err) {
       if (isContextError(err)) {
         downloadText(markdown, safeTitle + ".md");
         handleDeadContext(
-          "Downloaded " + safeTitle + ".md — extension was updated, refresh this page"
+          t("downloadedMdUpdated", { file: safeTitle + ".md" }),
+          "info"
         );
         return;
       }
@@ -395,13 +511,9 @@
       refreshTrackedLabels(false);
       if (settings.fallbackMd) {
         downloadText(markdown, safeTitle + ".md");
-        showToast(
-          "Downloaded " +
-            safeTitle +
-            ".md (Playground offline). Hint: docker compose -f web/docker-compose.yml up --build"
-        );
+        showToast(t("downloadedMdHint", { file: safeTitle + ".md" }), null, "info");
       } else {
-        showToast(err.message || "Export failed");
+        showToast(err.message || t("exportFailed"), null, "err");
       }
     }
   }
@@ -414,7 +526,7 @@
 
     const label = document.createElement("span");
     label.className = "md-to-docx-btn-label";
-    label.textContent = LABEL_WORD;
+    label.textContent = t("labelWord");
 
     btn.appendChild(createMdBadge());
     btn.appendChild(label);
@@ -471,10 +583,24 @@
 
   function setFloatOpen(wrap, open) {
     const isOpen = !!open;
+    const wasOpen = wrap.classList.contains("md-to-docx-float-open");
     wrap.classList.toggle("md-to-docx-float-open", isOpen);
     const launcher = wrap.querySelector(".md-to-docx-float-launcher");
+    const sheet = wrap.querySelector(".md-to-docx-float-sheet");
     if (launcher) launcher.setAttribute("aria-expanded", isOpen ? "true" : "false");
-    if (isOpen) positionFloatSheet(wrap);
+    if (isOpen) {
+      if (!wasOpen) wrap._mdPrevFocus = document.activeElement;
+      positionFloatSheet(wrap);
+      if (sheet) {
+        requestAnimationFrame(function () {
+          focusFirst(sheet);
+        });
+      }
+    } else if (wasOpen) {
+      const prev = wrap._mdPrevFocus;
+      wrap._mdPrevFocus = null;
+      restoreFocus(prev, launcher);
+    }
   }
 
   function enableFloatDrag(wrap, onDragStart) {
@@ -579,8 +705,9 @@
       launcher.className = "md-to-docx-float-launcher";
       launcher.setAttribute("aria-expanded", "false");
       launcher.setAttribute("aria-haspopup", "dialog");
-      launcher.title = LABEL_WORD + " (drag to move)";
-      launcher.setAttribute("aria-label", LABEL_WORD + " (drag to move)");
+      const tip = t("dragToMove", { label: t("labelWord") });
+      launcher.title = tip;
+      launcher.setAttribute("aria-label", tip);
       launcher.appendChild(createMdBadge());
 
       const status = document.createElement("span");
@@ -592,20 +719,22 @@
       const sheet = document.createElement("div");
       sheet.className = "md-to-docx-float-sheet";
       sheet.setAttribute("role", "dialog");
-      sheet.setAttribute("aria-label", "Export");
+      sheet.setAttribute("aria-modal", "true");
+      sheet.setAttribute("aria-label", t("exportTitle"));
 
       const header = document.createElement("div");
       header.className = "md-to-docx-float-sheet-header";
 
       const title = document.createElement("span");
       title.className = "md-to-docx-float-sheet-title";
-      title.textContent = "Export";
+      title.id = "md-to-docx-float-sheet-title";
+      title.textContent = t("exportTitle");
 
       const close = document.createElement("button");
       close.type = "button";
       close.className = "md-to-docx-float-sheet-close";
-      close.setAttribute("aria-label", "Close");
-      close.title = "Close";
+      close.setAttribute("aria-label", t("close"));
+      close.title = t("close");
       close.appendChild(createCloseSvg());
 
       header.appendChild(title);
@@ -617,7 +746,7 @@
 
       const actionLabel = document.createElement("span");
       actionLabel.className = "md-to-docx-float-label";
-      actionLabel.textContent = LABEL_WORD;
+      actionLabel.textContent = t("labelWord");
 
       action.appendChild(createMdBadge());
       action.appendChild(actionLabel);
@@ -626,6 +755,7 @@
       hint.className = "md-to-docx-float-hint";
       hint.textContent = exportHint(false);
 
+      sheet.setAttribute("aria-labelledby", title.id);
       sheet.appendChild(header);
       sheet.appendChild(action);
       sheet.appendChild(hint);
@@ -668,9 +798,16 @@
       }
 
       function onDocKeyDown(e) {
-        if (e.key !== "Escape") return;
         if (!wrap.classList.contains("md-to-docx-float-open")) return;
-        closeSheet();
+        if (e.key === "Escape") {
+          e.preventDefault();
+          closeSheet();
+          return;
+        }
+        if (e.key === "Tab") {
+          const openSheet = wrap.querySelector(".md-to-docx-float-sheet");
+          if (openSheet) trapFocus(openSheet, e);
+        }
       }
 
       document.addEventListener("pointerdown", onDocPointerDown, true);
@@ -781,17 +918,32 @@
     }, 0);
   }
 
+  if (global.MdToDocxI18n && typeof global.MdToDocxI18n.onLocaleChange === "function") {
+    global.MdToDocxI18n.onLocaleChange(() => {
+      probeEndpoint(false).catch(() => {});
+    });
+  }
+
   global.MdToDocxExport = {
     convertAndDownload,
     injectExportButton,
     injectFloatingButton,
     showToast,
+    showToastKey,
     probeEndpoint,
     getSettings,
     isExtensionAlive,
     exportLabel,
-    LABEL_WORD,
-    LABEL_MD,
+    setExportBusy,
+    trapFocus,
+    focusFirst,
+    restoreFocus,
+    get LABEL_WORD() {
+      return t("labelWord");
+    },
+    get LABEL_MD() {
+      return t("labelMd");
+    },
     DEFAULTS,
   };
 })(typeof window !== "undefined" ? window : globalThis);

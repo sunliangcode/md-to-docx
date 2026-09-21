@@ -19,6 +19,7 @@ const WEBPAGE_SCRIPT = {
     "src/lib/html-to-md.js",
     "src/lib/extract.js",
     "src/lib/observe.js",
+    "src/lib/i18n.js",
     "src/lib/export.js",
     "src/content/webpage.js",
   ],

@@ -92,7 +92,7 @@
     MdToDocxExport.injectExportButton(last.parentElement || last, () => {
       const data = extractConversationMarkdown(document);
       if (!data || !data.markdown.trim()) {
-        MdToDocxExport.showToast("Could not find conversation content on this page");
+        MdToDocxExport.showToastKey("errNoConversation", "err");
         return;
       }
       MdToDocxExport.convertAndDownload(data.markdown, data.title);
@@ -107,7 +107,7 @@
     MdToDocxExport.injectFloatingButton(() => {
       const data = extractConversationMarkdown(document);
       if (!data || !data.markdown.trim()) {
-        MdToDocxExport.showToast("Could not find conversation content on this page");
+        MdToDocxExport.showToastKey("errNoConversation", "err");
         return;
       }
       MdToDocxExport.convertAndDownload(data.markdown, data.title);

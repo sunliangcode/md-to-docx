@@ -36,6 +36,7 @@
         "src/lib/html-to-md.js",
         "src/lib/extract.js",
         "src/lib/observe.js",
+        "src/lib/i18n.js",
         "src/lib/export.js",
         "src/lib/batch.js",
         "src/content/chatgpt.js"
@@ -49,6 +50,7 @@
         "src/lib/html-to-md.js",
         "src/lib/extract.js",
         "src/lib/observe.js",
+        "src/lib/i18n.js",
         "src/lib/export.js",
         "src/lib/batch.js",
         "src/content/claude.js"
@@ -62,6 +64,7 @@
         "src/lib/html-to-md.js",
         "src/lib/extract.js",
         "src/lib/observe.js",
+        "src/lib/i18n.js",
         "src/lib/export.js",
         "src/content/gemini.js"
       ],
@@ -74,6 +77,7 @@
         "src/lib/html-to-md.js",
         "src/lib/extract.js",
         "src/lib/observe.js",
+        "src/lib/i18n.js",
         "src/lib/export.js",
         "src/content/deepseek.js"
       ],
@@ -86,6 +90,7 @@
         "src/lib/html-to-md.js",
         "src/lib/extract.js",
         "src/lib/observe.js",
+        "src/lib/i18n.js",
         "src/lib/export.js",
         "src/content/kimi.js"
       ],
@@ -98,6 +103,7 @@
         "src/lib/html-to-md.js",
         "src/lib/extract.js",
         "src/lib/observe.js",
+        "src/lib/i18n.js",
         "src/lib/export.js",
         "src/lib/batch.js",
         "src/content/doubao.js"

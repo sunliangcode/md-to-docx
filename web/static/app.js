@@ -15,6 +15,7 @@
   const errorCause = document.getElementById("error-cause");
   const errorFix = document.getElementById("error-fix");
   const errorDismiss = document.getElementById("error-dismiss");
+  const errorRetry = document.getElementById("error-retry");
   const charCountEl = document.getElementById("char-count");
   const toastEl = document.getElementById("toast");
   const presetHintEl = document.getElementById("preset-hint");
@@ -48,9 +49,13 @@
   const reverseDropzone = document.getElementById("reverse-dropzone");
   const reverseFileName = document.getElementById("reverse-file-name");
   const reverseOut = document.getElementById("reverse-out");
+  const reverseEmpty = document.getElementById("reverse-empty");
   const runReverse = document.getElementById("run-reverse");
   const sendToConvert = document.getElementById("send-to-convert");
   const copyReverseMd = document.getElementById("copy-reverse-md");
+  const downloadReverseMd = document.getElementById("download-reverse-md");
+  const reverseClear = document.getElementById("reverse-clear");
+  const reverseMeta = document.getElementById("reverse-meta");
   const copyCliReverse = document.getElementById("copy-cli-reverse");
   const diffA = document.getElementById("diff-a");
   const diffB = document.getElementById("diff-b");
@@ -101,6 +106,8 @@
   let debounceTimer;
   let toastTimer;
   let previewSeq = 0;
+  let previewAbort = null;
+  let lastPreviewKey = "";
   let presetsCache = [];
   let currentMode = "convert";
   let convertInputMode = "upload";
@@ -150,6 +157,42 @@
     return (n / (1024 * 1024)).toFixed(1) + " MB";
   }
 
+  function shortcutModLabel() {
+    const ua = navigator.userAgent || "";
+    const platform = navigator.platform || "";
+    if (/Mac|iPhone|iPad|iPod/i.test(platform) || /Mac OS X/i.test(ua)) return "⌘";
+    return "Ctrl+";
+  }
+
+  function applyShortcutHints() {
+    const mod = shortcutModLabel();
+    const label = t("shortcutRun", { mod: mod });
+    const title = t("shortcutRunTitle", { mod: mod });
+    [
+      ["generate-kbd", generateBtn],
+      ["run-batch-kbd", runBatch],
+      ["run-reverse-kbd", runReverse],
+      ["run-diff-kbd", runDiff],
+    ].forEach(function (pair) {
+      const kbd = document.getElementById(pair[0]);
+      if (kbd) kbd.textContent = label;
+      if (pair[1]) pair[1].title = title;
+    });
+  }
+
+  function previewSkeletonHtml() {
+    return (
+      '<div class="skeleton" aria-hidden="true">' +
+      '<div class="skeleton__line skeleton__line--lg"></div>' +
+      '<div class="skeleton__line"></div>' +
+      '<div class="skeleton__line"></div>' +
+      '<div class="skeleton__line skeleton__line--short"></div>' +
+      '<div class="skeleton__line"></div>' +
+      '<div class="skeleton__line skeleton__line--med"></div>' +
+      "</div>"
+    );
+  }
+
   function previewFontFamily(latin, eastAsia) {
     const latinStack = FONT_FALLBACKS[latin] || latin + ", sans-serif";
     const eastStack = FONT_FALLBACKS[eastAsia] || eastAsia + ", sans-serif";
@@ -162,55 +205,157 @@
     });
   }
 
+  function localizeValidationCause(cause) {
+    let text = String(cause || "");
+    if (currentLang === "zh") {
+      text = text
+        .replace(/Field required/g, "必填")
+        .replace(/value is not a valid/gi, "值无效")
+        .replace(/Input should be/gi, "应为")
+        .replace(/String should have at least/gi, "至少需要");
+    }
+    return text;
+  }
+
   function parseError(res, json) {
     const detail = (json && (json.detail || json)) || {};
     if (typeof detail === "string") {
-      return { problem: "Request failed", cause: detail, fix: "Try again" };
+      return {
+        problem: t("errorRequestFailed"),
+        cause: detail,
+        fix: t("errorTryAgain"),
+      };
     }
     if (Array.isArray(detail)) {
-      return { problem: "Request failed", cause: JSON.stringify(detail), fix: "Try again" };
+      return {
+        problem: t("errorInvalidRequest"),
+        cause: localizeValidationCause(
+          detail
+            .slice(0, 5)
+            .map(function (e) {
+              if (!e || typeof e !== "object") return String(e);
+              const loc = (e.loc || []).filter(function (x) { return x !== "body"; }).join(".");
+              return loc ? loc + ": " + (e.msg || "invalid") : (e.msg || JSON.stringify(e));
+            })
+            .join("; ")
+        ),
+        fix: t("errorInvalidRequestFix"),
+      };
+    }
+    const status = res && res.status;
+    if (status === 422 || detail.problem === "Invalid request") {
+      return {
+        problem: t("errorInvalidRequest"),
+        cause: localizeValidationCause(detail.cause || res.statusText || String(status)),
+        fix: detail.fix && detail.fix !== "Check the highlighted fields and try again"
+          ? detail.fix
+          : t("errorInvalidRequestFix"),
+      };
+    }
+    if (status === 429 || status === 503) {
+      return {
+        problem: t("errorServerBusy"),
+        cause: detail.cause || res.statusText || String(status),
+        fix: t("errorServerBusyFix"),
+      };
     }
     return {
-      problem: detail.problem || "Request failed",
-      cause: detail.cause || res.statusText,
-      fix: detail.fix || "Try again",
+      problem: detail.problem || t("errorRequestFailed"),
+      cause: detail.cause || res.statusText || String(res.status),
+      fix: detail.fix || t("errorTryAgain"),
     };
+  }
+
+  function networkErrorDetail(err) {
+    if (typeof navigator !== "undefined" && navigator.onLine === false) {
+      return {
+        problem: t("errorOffline"),
+        cause: t("errorOfflineCause"),
+        fix: t("errorOfflineFix"),
+      };
+    }
+    return {
+      problem: t("errorNetwork"),
+      cause: err ? String(err.message || err) : "",
+      fix: t("errorNetworkFix"),
+    };
+  }
+
+  function syncOfflineBanner() {
+    const banner = document.getElementById("offline-banner");
+    if (!banner) return;
+    const offline = typeof navigator !== "undefined" && navigator.onLine === false;
+    banner.hidden = !offline;
+    banner.classList.toggle("hidden", !offline);
+    if (offline) banner.textContent = t("errorOfflineBanner");
   }
 
   function setConvertInputMode(mode) {
     convertInputMode = mode;
     document.querySelectorAll("#convert-input-mode .segmented__btn").forEach(function (btn) {
-      btn.classList.toggle(
-        "segmented__btn--active",
-        btn.getAttribute("data-input-mode") === mode
-      );
+      const on = btn.getAttribute("data-input-mode") === mode;
+      btn.classList.toggle("segmented__btn--active", on);
+      btn.setAttribute("aria-pressed", on ? "true" : "false");
     });
+    syncRovingTabindex(
+      document.getElementById("convert-input-mode"),
+      ".segmented__btn",
+      "data-input-mode",
+      mode
+    );
     const isUpload = mode === "upload";
     convertPaneUpload.classList.toggle("hidden", !isUpload);
     convertPaneEditor.classList.toggle("hidden", isUpload);
-    if (!isUpload) schedulePreview();
+    if (!isUpload) {
+      schedulePreview();
+      // Focus after layout so paste mode feels instant (Linear/Notion pattern).
+      requestAnimationFrame(function () {
+        markdownEl.focus({ preventScroll: true });
+      });
+    }
+    syncPanelInert();
+    syncPrimaryActions();
   }
 
   function setDiffInputMode(mode) {
     diffInputMode = mode;
     document.querySelectorAll("#diff-input-mode .segmented__btn").forEach(function (btn) {
-      btn.classList.toggle(
-        "segmented__btn--active",
-        btn.getAttribute("data-diff-mode") === mode
-      );
+      const on = btn.getAttribute("data-diff-mode") === mode;
+      btn.classList.toggle("segmented__btn--active", on);
+      btn.setAttribute("aria-pressed", on ? "true" : "false");
     });
+    syncRovingTabindex(
+      document.getElementById("diff-input-mode"),
+      ".segmented__btn",
+      "data-diff-mode",
+      mode
+    );
     const isUpload = mode === "upload";
     diffDropA.classList.toggle("hidden", !isUpload);
     diffDropB.classList.toggle("hidden", !isUpload);
     diffA.classList.toggle("hidden", isUpload);
     diffB.classList.toggle("hidden", isUpload);
+    syncPanelInert();
+    syncPrimaryActions();
+  }
+
+  function syncPanelInert() {
+    document.querySelectorAll("[data-mode-panel]").forEach(function (el) {
+      const visible = !el.classList.contains("hidden") && !el.hidden;
+      if (visible) el.removeAttribute("inert");
+      else el.setAttribute("inert", "");
+    });
   }
 
   function setMode(mode) {
+    const prevMode = currentMode;
     currentMode = mode;
     document.querySelectorAll(".mode-nav__btn").forEach(function (btn) {
-      btn.classList.toggle("mode-nav__btn--active", btn.getAttribute("data-mode") === mode);
+      const on = btn.getAttribute("data-mode") === mode;
+      btn.classList.toggle("mode-nav__btn--active", on);
+      btn.setAttribute("aria-pressed", on ? "true" : "false");
     });
+    syncRovingTabindex(document.querySelector(".mode-nav"), ".mode-nav__btn", "data-mode", mode);
     document.querySelectorAll("[data-mode-panel]").forEach(function (el) {
       const on = el.getAttribute("data-mode-panel") === mode;
       el.classList.toggle("hidden", !on);
@@ -229,13 +374,57 @@
     }
     if (mode === "batch") {
       if (!batchOptionsOpen) batchOptionsPanel.classList.add("hidden");
-      if (!batchOut.textContent.trim()) batchOut.textContent = t("batchEmpty");
+      if (!batchOut.textContent.trim() || batchOut.dataset.empty === "1") {
+        setPanelEmpty(batchOut, "batchEmpty", "batchEmptyTitle");
+      }
     }
     if (mode === "diff") {
       if (!diffOptionsOpen) diffOptionsPanel.classList.add("hidden");
       setDiffInputMode(diffInputMode);
-      if (!diffOut.textContent.trim()) diffOut.textContent = t("diffEmpty");
+      if (!diffOut.textContent.trim() || diffOut.dataset.empty === "1") {
+        setPanelEmpty(diffOut, "diffEmpty", "diffEmptyTitle");
+      }
     }
+    if (mode === "reverse") {
+      syncReverseResultView();
+    }
+    syncPanelInert();
+    const ae = document.activeElement;
+    if (ae && ae.closest && ae.closest("[inert]")) {
+      const activeBtn = document.querySelector('.mode-nav__btn[data-mode="' + mode + '"]');
+      if (activeBtn) {
+        try {
+          activeBtn.focus({ preventScroll: true });
+        } catch (_) {
+          activeBtn.focus();
+        }
+      }
+    }
+    syncDocumentTitle();
+    if (prevMode !== mode) announceMode(mode);
+    syncPrimaryActions();
+  }
+
+  function announceMode(mode) {
+    const live = document.getElementById("status-live");
+    if (!live) return;
+    const modeKeys = {
+      convert: "modeConvert",
+      batch: "modeBatch",
+      reverse: "modeReverse",
+      diff: "modeDiff",
+    };
+    live.textContent = t("statusModeChanged", { mode: t(modeKeys[mode] || "modeConvert") });
+  }
+
+  function syncDocumentTitle() {
+    const modeKeys = {
+      convert: "modeConvert",
+      batch: "modeBatch",
+      reverse: "modeReverse",
+      diff: "modeDiff",
+    };
+    document.title = t("pageTitle") + " · " + t(modeKeys[currentMode] || "modeConvert");
   }
 
   function setText(id, key) {
@@ -244,11 +433,32 @@
   }
 
   function applyI18n() {
-    document.title = t("pageTitle");
+    syncDocumentTitle();
     document.documentElement.lang = currentLang === "zh" ? "zh-CN" : "en";
+    const skip = document.querySelector(".skip-link");
+    if (skip) skip.textContent = t("skipLink");
+    if (errorRetry) errorRetry.textContent = t("btnRetry");
+    setText("open-shortcuts", "btnShortcuts");
+    [
+      optionsPanel,
+      batchOptionsPanel,
+      diffOptionsPanel,
+    ].forEach(function (panel) {
+      if (panel) panel.setAttribute("aria-label", t("optionsRegionLabel"));
+    });
+    renderShortcutsList();
+    const shortcutsTitle = document.getElementById("shortcuts-title");
+    const shortcutsHint = document.getElementById("shortcuts-hint");
+    const shortcutsClose = document.getElementById("shortcuts-close");
+    if (shortcutsTitle) shortcutsTitle.textContent = t("shortcutsTitle");
+    if (shortcutsHint) shortcutsHint.textContent = t("shortcutsHint");
+    if (shortcutsClose) shortcutsClose.setAttribute("aria-label", t("shortcutsClose"));
 
     setText("i18n-header-hint", "headerHint");
     document.getElementById("lang-switch").setAttribute("aria-label", t("langLabel"));
+    document.querySelector(".mode-nav").setAttribute("aria-label", t("modeNavLabel"));
+    document.getElementById("convert-input-mode").setAttribute("aria-label", t("inputModeLabel"));
+    document.getElementById("diff-input-mode").setAttribute("aria-label", t("diffInputLabel"));
     setText("mode-convert", "modeConvert");
     setText("mode-batch", "modeBatch");
     setText("mode-reverse", "modeReverse");
@@ -301,12 +511,23 @@
     setText("i18n-pane-batch-out", "paneBatchOut");
     setText("i18n-convert-drop-title", "convertDropTitle");
     setText("i18n-convert-drop-hint", "convertDropHint");
+    setText("convert-pick-file", "dropChooseFile");
+    setText("convert-try-example", "dropTryExample");
+    setText("convert-switch-paste", "dropSwitchPaste");
     setText("i18n-batch-drop-title", "batchDropTitle");
     setText("i18n-batch-drop-hint", "batchDropHint");
+    setText("batch-pick-files", "dropChooseFiles");
     setText("i18n-reverse-drop-title", "reverseDropTitle");
     setText("i18n-reverse-empty", "reverseEmpty");
+    setText("reverse-pick-file", "dropChooseDocx");
+    setText("download-reverse-md", "btnDownloadMd");
+    if (reverseClear) reverseClear.textContent = t("btnClear");
     setText("i18n-diff-drop-a", "diffDropA");
     setText("i18n-diff-drop-b", "diffDropB");
+    setText("i18n-diff-drop-hint-a", "diffDropHint");
+    setText("i18n-diff-drop-hint-b", "diffDropHint");
+    setText("diff-pick-a", "dropChooseFile");
+    setText("diff-pick-b", "dropChooseFile");
     setText("i18n-validate-title", "validateTitle");
     setText("i18n-label-exclude", "labelExclude");
     setText("i18n-label-skip-existing", "labelSkipExisting");
@@ -324,13 +545,13 @@
     diffA.placeholder = t("diffEmpty");
     diffB.placeholder = t("diffEmpty");
     if (!diffOut.textContent.trim() || diffOut.dataset.empty === "1") {
-      diffOut.textContent = t("diffEmpty");
-      diffOut.dataset.empty = "1";
+      setPanelEmpty(diffOut, "diffEmpty", "diffEmptyTitle");
     }
     if (!batchOut.textContent.trim() || batchOut.dataset.empty === "1") {
-      batchOut.textContent = t("batchEmpty");
-      batchOut.dataset.empty = "1";
+      setPanelEmpty(batchOut, "batchEmpty", "batchEmptyTitle");
     }
+    syncReverseResultView();
+    syncOfflineBanner();
 
     toggleOptions.textContent = optionsOpen ? t("btnOptionsHide") : t("btnOptions");
     toggleBatchOptions.textContent = batchOptionsOpen ? t("btnOptionsHide") : t("btnOptions");
@@ -363,9 +584,21 @@
       batchDryRun.querySelector(".btn__label").textContent = t("btnDryRun");
     }
     errorDismiss.setAttribute("aria-label", t("errorDismiss"));
+    applyShortcutHints();
+    [
+      [convertDropzone, "convertDropTitle"],
+      [batchDropzone, "batchDropTitle"],
+      [reverseDropzone, "reverseDropTitle"],
+      [diffDropA, "diffDropA"],
+      [diffDropB, "diffDropB"],
+    ].forEach(function (pair) {
+      if (pair[0]) pair[0].setAttribute("aria-label", t(pair[1]));
+    });
 
     langEnBtn.classList.toggle("lang-switch__btn--active", currentLang === "en");
     langZhBtn.classList.toggle("lang-switch__btn--active", currentLang === "zh");
+    langEnBtn.setAttribute("aria-pressed", currentLang === "en" ? "true" : "false");
+    langZhBtn.setAttribute("aria-pressed", currentLang === "zh" ? "true" : "false");
 
     exampleEl.querySelectorAll("option[data-example-key]").forEach(function (opt) {
       const key = opt.getAttribute("data-example-key");
@@ -390,6 +623,7 @@
     if (presetEl.value) applyPresetUi(presetEl.value, false);
     if (batchPresetEl.value) applyBatchPresetUi(batchPresetEl.value, false);
     if (currentMode === "convert" && convertInputMode === "paste") schedulePreview();
+    syncPrimaryActions();
   }
 
   function setLang(lang) {
@@ -456,14 +690,104 @@
     }
   }
 
+  function prefersReducedMotion() {
+    return !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
+  }
+
+  let shortcutsOpen = false;
+  let shortcutsReturnFocus = null;
+
+  function shortcutsEntries() {
+    const mod = shortcutModLabel();
+    return [
+      { keys: [mod + "Enter"], label: t("shortcutRunAction") },
+      { keys: ["Esc"], label: t("shortcutEscape") },
+      { keys: ["?"], label: t("shortcutShortcuts") },
+      { keys: [mod + "/"], label: t("shortcutShortcuts") },
+      { keys: ["←", "→"], label: t("shortcutModeNav") },
+    ];
+  }
+
+  function renderShortcutsList() {
+    const list = document.getElementById("shortcuts-list");
+    if (!list) return;
+    list.innerHTML = "";
+    shortcutsEntries().forEach(function (entry) {
+      const li = document.createElement("li");
+      li.className = "shortcuts-dialog__row";
+      const label = document.createElement("span");
+      label.textContent = entry.label;
+      const keys = document.createElement("span");
+      keys.className = "shortcuts-dialog__keys";
+      entry.keys.forEach(function (k) {
+        const kbd = document.createElement("kbd");
+        kbd.className = "shortcuts-dialog__key";
+        kbd.textContent = k;
+        keys.appendChild(kbd);
+      });
+      li.appendChild(label);
+      li.appendChild(keys);
+      list.appendChild(li);
+    });
+  }
+
+  function openShortcuts() {
+    const dialog = document.getElementById("shortcuts-dialog");
+    if (!dialog || shortcutsOpen) return;
+    shortcutsOpen = true;
+    shortcutsReturnFocus = document.activeElement;
+    renderShortcutsList();
+    dialog.hidden = false;
+    dialog.classList.remove("hidden");
+    document.body.classList.add("app--dialog-open");
+    const closeBtn = document.getElementById("shortcuts-close");
+    if (closeBtn) {
+      try {
+        closeBtn.focus({ preventScroll: true });
+      } catch (_) {
+        closeBtn.focus();
+      }
+    }
+  }
+
+  function closeShortcuts() {
+    const dialog = document.getElementById("shortcuts-dialog");
+    if (!dialog || !shortcutsOpen) return;
+    shortcutsOpen = false;
+    dialog.hidden = true;
+    dialog.classList.add("hidden");
+    document.body.classList.remove("app--dialog-open");
+    if (shortcutsReturnFocus && typeof shortcutsReturnFocus.focus === "function") {
+      try {
+        shortcutsReturnFocus.focus({ preventScroll: true });
+      } catch (_) {
+        shortcutsReturnFocus.focus();
+      }
+    }
+    shortcutsReturnFocus = null;
+  }
+
   function showToast(message) {
     clearTimeout(toastTimer);
     toastEl.textContent = message;
     toastEl.classList.remove("hidden");
+    if (prefersReducedMotion()) {
+      toastEl.classList.add("toast--visible");
+      toastTimer = setTimeout(function () {
+        toastEl.classList.remove("toast--visible");
+        toastEl.classList.add("hidden");
+      }, 2200);
+      return;
+    }
+    // Force reflow so repeated toasts still animate.
+    void toastEl.offsetWidth;
     toastEl.classList.add("toast--visible");
     toastTimer = setTimeout(function () {
       toastEl.classList.remove("toast--visible");
-    }, 3000);
+      toastTimer = setTimeout(function () {
+        toastEl.classList.add("hidden");
+      }, 280);
+    }, 2800);
   }
 
   function showError(detail) {
@@ -479,13 +803,120 @@
     errorCause.textContent = detail.cause ? t("errorCause") + detail.cause : "";
     errorFix.textContent = detail.fix ? t("errorFix") + detail.fix : "";
     errorEl.classList.remove("hidden");
+    errorEl.scrollIntoView({
+      behavior: prefersReducedMotion() ? "auto" : "smooth",
+      block: "nearest",
+    });
+    try {
+      errorDismiss.focus({ preventScroll: true });
+    } catch (_) {
+      errorDismiss.focus();
+    }
   }
 
   function setBtnLoading(btn, loading, idleKey, loadingKey) {
-    btn.disabled = loading;
     btn.classList.toggle("btn--loading", loading);
+    btn.setAttribute("aria-busy", loading ? "true" : "false");
     const label = btn.querySelector(".btn__label");
     if (label) label.textContent = loading ? t(loadingKey) : t(idleKey);
+    const kbd = btn.querySelector(".btn__kbd");
+    if (kbd) kbd.hidden = !!loading;
+    syncPrimaryActions();
+  }
+
+  function isLoading(btn) {
+    return btn && btn.classList.contains("btn--loading");
+  }
+
+  function setActionEnabled(btn, ready, needKey) {
+    if (!btn) return;
+    const loading = isLoading(btn);
+    const enabled = ready && !loading;
+    btn.disabled = !enabled;
+    if (!ready && needKey) {
+      btn.title = t(needKey);
+    } else if (!loading) {
+      // Restore shortcut title for primary run buttons.
+      const kbd = btn.querySelector(".btn__kbd");
+      if (kbd) btn.title = t("shortcutRunTitle", { mod: shortcutModLabel() });
+      else btn.removeAttribute("title");
+    }
+  }
+
+  function syncPrimaryActions() {
+    const mdReady = !!markdownEl.value.trim();
+    const mdBytes = new TextEncoder().encode(markdownEl.value).length;
+    const mdUnderLimit = mdBytes <= 400 * 1024;
+    setActionEnabled(generateBtn, mdReady && mdUnderLimit, mdReady && !mdUnderLimit ? "actionMdTooLarge" : "actionNeedMd");
+    setActionEnabled(validateBtn, mdReady, "actionNeedMd");
+
+    const batchReady = batchItems.length > 0;
+    setActionEnabled(runBatch, batchReady, "actionNeedBatch");
+    setActionEnabled(batchDryRun, batchReady, "actionNeedBatch");
+
+    const reverseReady = !!(reverseFile.files && reverseFile.files[0]);
+    setActionEnabled(runReverse, reverseReady, "actionNeedDocx");
+
+    let diffReady = false;
+    if (diffInputMode === "upload") {
+      diffReady = !!(diffFileA.files && diffFileA.files[0] && diffFileB.files && diffFileB.files[0]);
+    } else {
+      diffReady = !!(diffA.value.trim() || diffB.value.trim());
+    }
+    setActionEnabled(runDiff, diffReady, "actionNeedDiff");
+
+    const reverseHasOut = !!reverseOut.value.trim();
+    sendToConvert.disabled = !reverseHasOut;
+    copyReverseMd.disabled = !reverseHasOut;
+    if (downloadReverseMd) downloadReverseMd.disabled = !reverseHasOut;
+  }
+
+  function downloadTextFile(filename, text, mime) {
+    const blob = new Blob([text], { type: mime || "text/plain;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  function updateReverseMeta() {
+    const text = reverseOut.value || "";
+    if (!text.trim()) {
+      setResultMeta(reverseMeta, "");
+      return;
+    }
+    const bytes = new TextEncoder().encode(text).length;
+    const lines = text.split("\n").length;
+    setResultMeta(
+      reverseMeta,
+      t("reverseMetaSummary", { bytes: formatBytes(bytes), lines: String(lines) })
+    );
+  }
+
+  function clearReverseInput() {
+    reverseFile.value = "";
+    reverseFileName.hidden = true;
+    reverseFileName.textContent = "";
+    reverseOut.value = "";
+    if (reverseClear) reverseClear.hidden = true;
+    sendToConvert.disabled = true;
+    copyReverseMd.disabled = true;
+    if (downloadReverseMd) downloadReverseMd.disabled = true;
+    updateReverseMeta();
+    syncReverseResultView();
+    syncPrimaryActions();
+  }
+
+  function rejectOversized(file, maxBytes) {
+    if (!file || file.size <= maxBytes) return false;
+    showError({
+      problem: t("errorFileTooLarge"),
+      cause: file.name + " · " + formatBytes(file.size) + " > " + formatBytes(maxBytes),
+      fix: t("errorFileTooLargeFix", { max: formatBytes(maxBytes) }),
+    });
+    return true;
   }
 
   function optionalField(el) {
@@ -557,60 +988,339 @@
 
   function updateCharCount() {
     const bytes = new TextEncoder().encode(markdownEl.value).length;
+    const limit = 400 * 1024;
     charCountEl.textContent = formatBytes(bytes);
+    charCountEl.classList.toggle("pane__meta--warn", bytes > limit * 0.85);
+    charCountEl.classList.toggle("pane__meta--over", bytes > limit);
+    if (bytes > limit) {
+      charCountEl.title = t("errorFileTooLargeFix", { max: formatBytes(limit) });
+    } else if (bytes > limit * 0.85) {
+      charCountEl.title = formatBytes(bytes) + " / " + formatBytes(limit);
+    } else {
+      charCountEl.removeAttribute("title");
+    }
+    syncPrimaryActions();
+  }
+
+  function focusPanelFirstField(panel) {
+    if (!panel) return;
+    const focusable = panel.querySelector(
+      "input:not([type='hidden']):not([type='file']), select, textarea, button"
+    );
+    if (focusable) {
+      try {
+        focusable.focus({ preventScroll: true });
+      } catch (_) {
+        focusable.focus();
+      }
+    }
+  }
+
+  function closeOpenOptions() {
+    if (optionsOpen) {
+      optionsOpen = false;
+      optionsPanel.classList.add("hidden");
+      toggleOptions.setAttribute("aria-expanded", "false");
+      toggleOptions.textContent = t("btnOptions");
+      syncPanelInert();
+      toggleOptions.focus();
+      return true;
+    }
+    if (batchOptionsOpen) {
+      batchOptionsOpen = false;
+      batchOptionsPanel.classList.add("hidden");
+      toggleBatchOptions.setAttribute("aria-expanded", "false");
+      toggleBatchOptions.textContent = t("btnOptions");
+      syncPanelInert();
+      toggleBatchOptions.focus();
+      return true;
+    }
+    if (diffOptionsOpen) {
+      diffOptionsOpen = false;
+      diffOptionsPanel.classList.add("hidden");
+      toggleDiffOptions.setAttribute("aria-expanded", "false");
+      toggleDiffOptions.textContent = t("btnOptions");
+      syncPanelInert();
+      toggleDiffOptions.focus();
+      return true;
+    }
+    return false;
   }
 
   function showPreviewEmpty() {
-    previewEl.innerHTML = "";
+    previewEl.classList.remove("preview--loading", "preview--error", "preview--heavy");
     previewEl.classList.add("preview--empty");
-    previewEl.textContent = t("previewEmpty");
+    setPreviewTruncated(false);
+    previewEl.innerHTML =
+      '<div class="empty-state" role="status">' +
+      '<p class="empty-state__title"></p>' +
+      '<p class="empty-state__hint"></p>' +
+      '<div class="empty-state__actions">' +
+      '<button type="button" class="btn btn--ghost btn--small" data-empty-action="example"></button>' +
+      '<button type="button" class="btn btn--primary btn--small" data-empty-action="paste"></button>' +
+      "</div></div>";
+    previewEl.querySelector(".empty-state__title").textContent = t("previewEmptyTitle");
+    previewEl.querySelector(".empty-state__hint").textContent = t("previewEmptyHint");
+    const exampleBtn = previewEl.querySelector('[data-empty-action="example"]');
+    const pasteBtn = previewEl.querySelector('[data-empty-action="paste"]');
+    exampleBtn.textContent = t("emptyActionExample");
+    pasteBtn.textContent = t("emptyActionPaste");
+    exampleBtn.addEventListener("click", function () {
+      exampleEl.value = "technical-report";
+      loadExample("technical-report");
+    });
+    pasteBtn.addEventListener("click", function () {
+      setConvertInputMode("paste");
+    });
+  }
+
+  function showPreviewError(rawText, detail) {
+    previewEl.classList.remove("preview--loading", "preview--empty");
+    previewEl.classList.add("preview--error");
+    previewEl.innerHTML =
+      '<div class="empty-state empty-state--error" role="alert">' +
+      '<p class="empty-state__title"></p>' +
+      '<p class="empty-state__hint"></p>' +
+      '<pre class="empty-state__raw"></pre>' +
+      "</div>";
+    previewEl.querySelector(".empty-state__title").textContent =
+      (detail && detail.problem) || t("previewErrorTitle");
+    previewEl.querySelector(".empty-state__hint").textContent =
+      (detail && detail.fix) || t("previewErrorHint");
+    previewEl.querySelector(".empty-state__raw").textContent =
+      (detail && detail.cause) || rawText || "";
+  }
+
+  function setPanelEmpty(el, emptyKey, titleKey) {
+    el.classList.add("panel-out--empty");
+    el.classList.remove("panel-out--loading");
+    el.dataset.empty = "1";
+    const isDiff = el === diffOut;
+    const isBatch = el === batchOut;
+    const isReverse = el === reverseEmpty;
+    el.innerHTML =
+      '<div class="empty-state" role="status">' +
+      '<p class="empty-state__title"></p>' +
+      '<p class="empty-state__hint"></p>' +
+      (isDiff || isBatch || isReverse
+        ? '<div class="empty-state__actions"><button type="button" class="btn btn--primary btn--small" data-panel-action></button></div>'
+        : "") +
+      "</div>";
+    el.querySelector(".empty-state__title").textContent = t(titleKey);
+    el.querySelector(".empty-state__hint").textContent = t(emptyKey);
+    const action = el.querySelector("[data-panel-action]");
+    if (action && isDiff) {
+      action.textContent = t("btnLoadSample");
+      action.addEventListener("click", function () {
+        loadDiffSample.click();
+      });
+    }
+    if (action && isBatch) {
+      action.textContent = t("dropChooseFiles");
+      action.addEventListener("click", function () {
+        batchFilesInput.click();
+      });
+    }
+    if (action && isReverse) {
+      action.textContent = t("dropChooseDocx");
+      action.addEventListener("click", function () {
+        reverseFile.click();
+      });
+    }
+    const meta = isDiff
+      ? document.getElementById("diff-meta")
+      : isBatch
+        ? document.getElementById("batch-meta")
+        : isReverse
+          ? reverseMeta
+          : null;
+    if (meta) {
+      meta.hidden = true;
+      meta.textContent = "";
+    }
+  }
+
+  function syncReverseResultView() {
+    if (!reverseEmpty || !reverseOut) return;
+    const hasText = !!(reverseOut.value && reverseOut.value.trim());
+    if (hasText) {
+      reverseEmpty.hidden = true;
+      reverseEmpty.classList.add("hidden");
+      reverseEmpty.dataset.empty = "0";
+      reverseOut.hidden = false;
+      reverseOut.classList.remove("hidden");
+    } else {
+      reverseOut.hidden = true;
+      reverseOut.classList.add("hidden");
+      reverseEmpty.hidden = false;
+      reverseEmpty.classList.remove("hidden");
+      setPanelEmpty(reverseEmpty, "reverseOutEmpty", "reverseOutEmptyTitle");
+    }
+  }
+
+  function setPanelText(el, text) {
+    clearPanelEmpty(el);
+    el.textContent = text;
+  }
+
+  function setResultMeta(el, text) {
+    if (!el) return;
+    if (!text) {
+      el.hidden = true;
+      el.textContent = "";
+      return;
+    }
+    el.hidden = false;
+    el.textContent = text;
+  }
+
+  function summarizeDiff(text) {
+    const lines = String(text || "").split("\n");
+    let added = 0;
+    let removed = 0;
+    lines.forEach(function (line) {
+      if (line.startsWith("+") && !line.startsWith("+++")) added += 1;
+      else if (line.startsWith("-") && !line.startsWith("---")) removed += 1;
+    });
+    if (!added && !removed) return t("diffMetaNone");
+    return t("diffMetaSummary", { added: String(added), removed: String(removed) });
+  }
+
+  function clearPanelEmpty(el) {
+    el.classList.remove("panel-out--empty");
+    el.dataset.empty = "0";
+  }
+
+  function setPanelLoading(el, loading) {
+    if (!el) return;
+    el.classList.toggle("panel-out--loading", !!loading);
+    el.setAttribute("aria-busy", loading ? "true" : "false");
+  }
+
+  function wireRovingGroup(root, itemSelector) {
+    if (!root) return;
+    root.addEventListener("keydown", function (e) {
+      const items = Array.prototype.slice.call(root.querySelectorAll(itemSelector));
+      if (!items.length) return;
+      const idx = items.indexOf(document.activeElement);
+      if (idx < 0) return;
+      let next = -1;
+      if (e.key === "ArrowRight" || e.key === "ArrowDown") {
+        next = (idx + 1) % items.length;
+      } else if (e.key === "ArrowLeft" || e.key === "ArrowUp") {
+        next = (idx - 1 + items.length) % items.length;
+      } else if (e.key === "Home") {
+        next = 0;
+      } else if (e.key === "End") {
+        next = items.length - 1;
+      } else {
+        return;
+      }
+      e.preventDefault();
+      items[next].focus();
+      items[next].click();
+    });
+  }
+
+  function syncRovingTabindex(root, itemSelector, activeAttr, activeValue) {
+    if (!root) return;
+    root.querySelectorAll(itemSelector).forEach(function (btn) {
+      const on = btn.getAttribute(activeAttr) === activeValue;
+      btn.tabIndex = on ? 0 : -1;
+    });
   }
 
   function schedulePreview() {
     updateCharCount();
     clearTimeout(debounceTimer);
-    debounceTimer = setTimeout(fetchPreview, 350);
+    const bytes = new TextEncoder().encode(markdownEl.value).length;
+    let delay = 280;
+    if (bytes > 64 * 1024) delay = 700;
+    else if (bytes > 8 * 1024) delay = 450;
+    debounceTimer = setTimeout(fetchPreview, delay);
+  }
+
+  function setPreviewTruncated(on) {
+    const badge = document.getElementById("preview-truncated");
+    if (!badge) return;
+    badge.hidden = !on;
+    badge.classList.toggle("hidden", !on);
+    if (on) badge.textContent = t("previewTruncated");
   }
 
   async function fetchPreview() {
     const text = markdownEl.value;
     if (!text.trim()) {
+      lastPreviewKey = "";
+      setPreviewTruncated(false);
       showPreviewEmpty();
       return;
     }
+    const maxChars = 400 * 1024;
+    // Keep preview requests under API limits; mirror server soft-truncation UX.
+    let payload = text;
+    let forceTruncated = false;
+    if (payload.length > maxChars) {
+      const soft = 80_000;
+      const cut = payload.lastIndexOf("\n", soft);
+      payload = payload.slice(0, cut > soft / 2 ? cut : soft);
+      forceTruncated = true;
+    }
+    const key = (numberingEl.checked ? "1" : "0") + "\0" + text.length + "\0" + payload;
+    if (key === lastPreviewKey && !previewEl.classList.contains("preview--error")) {
+      return;
+    }
     const seq = ++previewSeq;
-    previewEl.classList.remove("preview--empty");
+    if (previewAbort) previewAbort.abort();
+    previewAbort = typeof AbortController !== "undefined" ? new AbortController() : null;
+    const hadContent = !previewEl.classList.contains("preview--empty") &&
+      !previewEl.classList.contains("preview--error") &&
+      previewEl.innerHTML.trim();
+    previewEl.classList.remove("preview--empty", "preview--error");
     previewEl.classList.add("preview--loading");
+    if (!hadContent) {
+      previewEl.innerHTML = previewSkeletonHtml();
+    }
     try {
       const res = await fetch("/api/preview", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ markdown: text, numbering: numberingEl.checked }),
+        body: JSON.stringify({ markdown: payload, numbering: numberingEl.checked }),
+        signal: previewAbort ? previewAbort.signal : undefined,
       });
       if (seq !== previewSeq) return;
       if (!res.ok) {
         previewEl.classList.remove("preview--loading");
-        previewEl.textContent = text;
+        setPreviewTruncated(false);
+        let json = {};
+        try { json = await res.json(); } catch (_) {}
+        showPreviewError("", parseError(res, json));
         return;
       }
       const data = await res.json();
       if (seq !== previewSeq) return;
       previewEl.classList.remove("preview--loading");
       if (!data.html) {
+        setPreviewTruncated(false);
         showPreviewEmpty();
         return;
       }
       previewEl.innerHTML = data.html;
+      previewEl.classList.toggle("preview--heavy", data.html.length > 40_000);
+      setPreviewTruncated(!!data.truncated || forceTruncated);
+      lastPreviewKey = key;
       if (data.css && !document.getElementById("engine-preview-css")) {
         const style = document.createElement("style");
         style.id = "engine-preview-css";
         style.textContent = data.css;
         document.head.appendChild(style);
       }
-    } catch (_) {
+    } catch (err) {
+      if (err && err.name === "AbortError") return;
       if (seq !== previewSeq) return;
       previewEl.classList.remove("preview--loading");
-      previewEl.textContent = text;
+      setPreviewTruncated(false);
+      showPreviewError("", networkErrorDetail(err));
     }
   }
 
@@ -674,6 +1384,7 @@
       });
       return;
     }
+    if (rejectOversized(file, 400 * 1024)) return;
     markdownEl.value = await file.text();
     setConvertInputMode("paste");
     schedulePreview();
@@ -722,7 +1433,7 @@
       URL.revokeObjectURL(url);
       showToast(t("toastDownloaded"));
     } catch (e) {
-      showError({ problem: t("errorNetwork"), cause: String(e), fix: t("errorNetworkFix") });
+      showError(networkErrorDetail(e));
     } finally {
       setBtnLoading(generateBtn, false, "btnExport", "btnExportLoading");
     }
@@ -749,6 +1460,7 @@
       const issues = json.issues || [];
       validateList.innerHTML = "";
       validatePanel.classList.remove("hidden");
+      syncPanelInert();
       if (!issues.length) {
         validateMeta.textContent = t("validateClean");
         const li = document.createElement("li");
@@ -764,9 +1476,18 @@
           li.textContent = line + issue.code + ": " + issue.message;
           if (issue.line != null) {
             li.tabIndex = 0;
-            li.addEventListener("click", function () {
+            li.setAttribute("role", "button");
+            li.setAttribute("aria-label", t("goToLine", { line: String(issue.line) }));
+            function go() {
               setConvertInputMode("paste");
               jumpToLine(issue.line);
+            }
+            li.addEventListener("click", go);
+            li.addEventListener("keydown", function (e) {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                go();
+              }
             });
           }
           validateList.appendChild(li);
@@ -774,7 +1495,7 @@
       }
       showToast(t("toastValidated"));
     } catch (e) {
-      showError({ problem: t("errorNetwork"), cause: String(e), fix: t("errorNetworkFix") });
+      showError(networkErrorDetail(e));
     } finally {
       setBtnLoading(validateBtn, false, "btnValidate", "btnValidateLoading");
     }
@@ -808,8 +1529,17 @@
   }
 
   function wireDropzone(zone, input, onFiles) {
+    if (!zone || !input) return;
+    input.tabIndex = -1;
+    input.setAttribute("aria-hidden", "true");
+    zone.setAttribute("role", "region");
+    const title = zone.querySelector(".dropzone__title");
+    if (title && title.textContent) {
+      zone.setAttribute("aria-label", title.textContent.trim());
+    }
     zone.addEventListener("click", function (e) {
       if (e.target === input) return;
+      if (e.target.closest("button, a, label")) return;
       input.click();
     });
     zone.addEventListener("dragover", function (e) {
@@ -839,6 +1569,15 @@
       return;
     }
     setBtnLoading(runReverse, true, "btnReverse", "btnReverseLoading");
+    if (reverseEmpty) {
+      reverseEmpty.hidden = false;
+      reverseEmpty.classList.remove("hidden");
+      reverseOut.hidden = true;
+      reverseOut.classList.add("hidden");
+      setPanelLoading(reverseEmpty, true);
+    } else {
+      setPanelLoading(reverseOut, true);
+    }
     try {
       const fd = new FormData();
       fd.append("file", file, file.name);
@@ -847,26 +1586,35 @@
         let json = {};
         try { json = await res.json(); } catch (_) {}
         showError(parseError(res, json));
+        syncReverseResultView();
         return;
       }
       reverseOut.value = await res.text();
       sendToConvert.disabled = !reverseOut.value.trim();
       copyReverseMd.disabled = !reverseOut.value.trim();
+      if (downloadReverseMd) downloadReverseMd.disabled = !reverseOut.value.trim();
+      updateReverseMeta();
+      syncReverseResultView();
       showToast(t("toastReversed"));
     } catch (e) {
-      showError({ problem: t("errorNetwork"), cause: String(e), fix: t("errorNetworkFix") });
+      showError(networkErrorDetail(e));
+      syncReverseResultView();
     } finally {
+      if (reverseEmpty) setPanelLoading(reverseEmpty, false);
+      setPanelLoading(reverseOut, false);
       setBtnLoading(runReverse, false, "btnReverse", "btnReverseLoading");
     }
   }
 
   async function doDiff() {
     showError(null);
+    setResultMeta(document.getElementById("diff-meta"), "");
     const a = diffA.value;
     const b = diffB.value;
     const fileA = diffFileA.files && diffFileA.files[0];
     const fileB = diffFileB.files && diffFileB.files[0];
     setBtnLoading(runDiff, true, "btnDiff", "btnDiffLoading");
+    setPanelLoading(diffOut, true);
     try {
       let res;
       if (diffInputMode === "upload") {
@@ -897,11 +1645,13 @@
         return;
       }
       diffOut.textContent = await res.text();
-      diffOut.dataset.empty = "0";
+      clearPanelEmpty(diffOut);
+      setResultMeta(document.getElementById("diff-meta"), summarizeDiff(diffOut.textContent));
       showToast(t("toastDiffed"));
     } catch (e) {
-      showError({ problem: t("errorNetwork"), cause: String(e), fix: t("errorNetworkFix") });
+      showError(networkErrorDetail(e));
     } finally {
+      setPanelLoading(diffOut, false);
       setBtnLoading(runDiff, false, "btnDiff", "btnDiffLoading");
     }
   }
@@ -912,6 +1662,7 @@
       batchFileList.classList.add("hidden");
       batchDropzone.classList.remove("hidden");
       batchClear.hidden = true;
+      syncPrimaryActions();
       return;
     }
     batchFileList.classList.remove("hidden");
@@ -926,6 +1677,8 @@
       remove.type = "button";
       remove.className = "btn btn--ghost btn--small";
       remove.textContent = "×";
+      remove.setAttribute("aria-label", t("btnRemoveFile") + ": " + item.name);
+      remove.title = t("btnRemoveFile");
       remove.addEventListener("click", function () {
         batchItems.splice(idx, 1);
         renderBatchList();
@@ -934,6 +1687,7 @@
       li.appendChild(remove);
       batchFileList.appendChild(li);
     });
+    syncPrimaryActions();
   }
 
   function addBatchFiles(fileList) {
@@ -947,21 +1701,22 @@
     });
     if (zips.length && mds.length) {
       showError({
-        problem: "Mixed upload",
-        cause: "zip and markdown together",
-        fix: "Upload either a zip or .md files",
+        problem: t("errorBatchMixed"),
+        cause: "zip + markdown",
+        fix: t("errorBatchMixedFix"),
       });
       return;
     }
     if (zips.length > 1) {
       showError({
-        problem: "Too many zips",
-        cause: "only one zip allowed",
-        fix: "Drop a single zip archive",
+        problem: t("errorBatchMultiZip"),
+        cause: "zip count > 1",
+        fix: t("errorBatchMultiZipFix"),
       });
       return;
     }
     if (zips.length === 1) {
+      if (rejectOversized(zips[0], 10 * 1024 * 1024)) return;
       batchItems = [{ file: zips[0], name: zips[0].name, kind: "zip" }];
     } else {
       batchItems = batchItems.filter(function (i) { return i.kind !== "zip"; });
@@ -970,6 +1725,15 @@
           batchItems.push({ file: f, name: f.name, kind: "md" });
         }
       });
+      const total = batchItems.reduce(function (sum, item) { return sum + item.file.size; }, 0);
+      if (total > 10 * 1024 * 1024) {
+        showError({
+          problem: t("errorFileTooLarge"),
+          cause: formatBytes(total) + " > " + formatBytes(10 * 1024 * 1024),
+          fix: t("errorFileTooLargeFix", { max: formatBytes(10 * 1024 * 1024) }),
+        });
+        return;
+      }
     }
     renderBatchList();
     showError(null);
@@ -994,6 +1758,7 @@
 
   async function runBatchConvert(dryRun) {
     showError(null);
+    setResultMeta(document.getElementById("batch-meta"), "");
     if (!batchItems.length) {
       showError({ problem: t("errorBatchEmpty"), cause: "empty", fix: t("errorBatchEmptyFix") });
       return;
@@ -1002,6 +1767,7 @@
     const idle = dryRun ? "btnDryRun" : "btnBatch";
     const loading = dryRun ? "btnDryRunLoading" : "btnBatchLoading";
     setBtnLoading(btn, true, idle, loading);
+    setPanelLoading(batchOut, true);
     try {
       const fd = new FormData();
       const first = batchItems[0];
@@ -1038,9 +1804,19 @@
         const lines = [];
         (data.planned || []).forEach(function (p) { lines.push("→ " + p); });
         (data.skipped || []).forEach(function (p) { lines.push("skip " + p); });
-        batchOut.textContent = lines.join("\n") || t("batchEmpty");
-        batchOut.dataset.empty = "0";
-        showToast(t("toastBatchPlanned", { n: String((data.planned || []).length) }));
+        const planned = (data.planned || []).length;
+        const skipped = (data.skipped || []).length;
+        if (!lines.length) {
+          setPanelEmpty(batchOut, "batchEmpty", "batchEmptyTitle");
+          setResultMeta(document.getElementById("batch-meta"), "");
+        } else {
+          setPanelText(batchOut, lines.join("\n"));
+          setResultMeta(
+            document.getElementById("batch-meta"),
+            t("batchMetaPlan", { planned: String(planned), skipped: String(skipped) })
+          );
+        }
+        showToast(t("toastBatchPlanned", { n: String(planned) }));
       } else {
         const blob = await res.blob();
         const url = URL.createObjectURL(blob);
@@ -1049,13 +1825,15 @@
         a.download = "documents.zip";
         a.click();
         URL.revokeObjectURL(url);
-        batchOut.textContent = "ZIP ready · " + (res.headers.get("X-Batch-Count") || "") + " file(s)";
-        batchOut.dataset.empty = "0";
+        const n = res.headers.get("X-Batch-Count") || String(batchItems.length);
+        setPanelText(batchOut, t("batchZipReady", { n: n }));
+        setResultMeta(document.getElementById("batch-meta"), t("batchMetaDone", { n: n }));
         showToast(t("toastBatchDownloaded"));
       }
     } catch (e) {
-      showError({ problem: t("errorNetwork"), cause: String(e), fix: t("errorNetworkFix") });
+      showError(networkErrorDetail(e));
     } finally {
+      setPanelLoading(batchOut, false);
       setBtnLoading(btn, false, idle, loading);
     }
   }
@@ -1070,6 +1848,8 @@
 
   /* ── events ── */
   markdownEl.addEventListener("input", schedulePreview);
+  diffA.addEventListener("input", syncPrimaryActions);
+  diffB.addEventListener("input", syncPrimaryActions);
   numberingEl.addEventListener("change", function () {
     applyPresetUi(presetEl.value, false);
     schedulePreview();
@@ -1079,6 +1859,16 @@
   });
 
   errorDismiss.addEventListener("click", function () { showError(null); });
+  if (errorRetry) {
+    errorRetry.addEventListener("click", function () {
+      showError(null);
+      if (currentMode === "convert" && !generateBtn.disabled) generateBtn.click();
+      else if (currentMode === "batch" && !runBatch.disabled) runBatch.click();
+      else if (currentMode === "reverse" && !runReverse.disabled) runReverse.click();
+      else if (currentMode === "diff" && !runDiff.disabled) runDiff.click();
+      else if (currentMode === "convert") schedulePreview();
+    });
+  }
 
   presetEl.addEventListener("change", function () {
     applyPresetUi(presetEl.value);
@@ -1113,18 +1903,24 @@
     optionsPanel.classList.toggle("hidden", !optionsOpen);
     toggleOptions.setAttribute("aria-expanded", optionsOpen ? "true" : "false");
     toggleOptions.textContent = optionsOpen ? t("btnOptionsHide") : t("btnOptions");
+    syncPanelInert();
+    if (optionsOpen) focusPanelFirstField(optionsPanel);
   });
   toggleBatchOptions.addEventListener("click", function () {
     batchOptionsOpen = !batchOptionsOpen;
     batchOptionsPanel.classList.toggle("hidden", !batchOptionsOpen);
     toggleBatchOptions.setAttribute("aria-expanded", batchOptionsOpen ? "true" : "false");
     toggleBatchOptions.textContent = batchOptionsOpen ? t("btnOptionsHide") : t("btnOptions");
+    syncPanelInert();
+    if (batchOptionsOpen) focusPanelFirstField(batchOptionsPanel);
   });
   toggleDiffOptions.addEventListener("click", function () {
     diffOptionsOpen = !diffOptionsOpen;
     diffOptionsPanel.classList.toggle("hidden", !diffOptionsOpen);
     toggleDiffOptions.setAttribute("aria-expanded", diffOptionsOpen ? "true" : "false");
     toggleDiffOptions.textContent = diffOptionsOpen ? t("btnOptionsHide") : t("btnOptions");
+    syncPanelInert();
+    if (diffOptionsOpen) focusPanelFirstField(diffOptionsPanel);
   });
 
   document.querySelectorAll("#convert-input-mode .segmented__btn").forEach(function (btn) {
@@ -1153,43 +1949,71 @@
   wireDropzone(convertDropzone, convertFile, function (files) {
     ingestMdFile(files[0]);
   });
+  const convertPickFile = document.getElementById("convert-pick-file");
+  if (convertPickFile) {
+    convertPickFile.addEventListener("click", function (e) {
+      e.preventDefault();
+      e.stopPropagation();
+      convertFile.click();
+    });
+  }
   wireDropzone(reverseDropzone, reverseFile, function (files) {
+    if (rejectOversized(files[0], 2 * 1024 * 1024)) return;
     const dt = new DataTransfer();
     dt.items.add(files[0]);
     reverseFile.files = dt.files;
     reverseFileName.hidden = false;
     reverseFileName.textContent = files[0].name;
+    if (reverseClear) reverseClear.hidden = false;
+    syncPrimaryActions();
     doReverse();
   });
   wireDropzone(batchDropzone, batchFilesInput, addBatchFiles);
   wireDropzone(diffDropA, diffFileA, function (files) {
+    if (rejectOversized(files[0], 2 * 1024 * 1024)) return;
     const dt = new DataTransfer();
     dt.items.add(files[0]);
     diffFileA.files = dt.files;
     diffFileAName.hidden = false;
     diffFileAName.textContent = files[0].name;
     if (files[0].name.toLowerCase().endsWith(".md")) {
-      files[0].text().then(function (text) { diffA.value = text; });
+      files[0].text().then(function (text) {
+        diffA.value = text;
+        syncPrimaryActions();
+      });
     }
+    syncPrimaryActions();
   });
   wireDropzone(diffDropB, diffFileB, function (files) {
+    if (rejectOversized(files[0], 2 * 1024 * 1024)) return;
     const dt = new DataTransfer();
     dt.items.add(files[0]);
     diffFileB.files = dt.files;
     diffFileBName.hidden = false;
     diffFileBName.textContent = files[0].name;
     if (files[0].name.toLowerCase().endsWith(".md")) {
-      files[0].text().then(function (text) { diffB.value = text; });
+      files[0].text().then(function (text) {
+        diffB.value = text;
+        syncPrimaryActions();
+      });
     }
+    syncPrimaryActions();
   });
 
   batchClear.addEventListener("click", function () {
     batchItems = [];
     batchFilesInput.value = "";
     renderBatchList();
-    batchOut.textContent = t("batchEmpty");
-    batchOut.dataset.empty = "1";
+    setPanelEmpty(batchOut, "batchEmpty", "batchEmptyTitle");
   });
+  const batchPickFiles = document.getElementById("batch-pick-files");
+  if (batchPickFiles) {
+    batchPickFiles.addEventListener("click", function (e) {
+      e.preventDefault();
+      e.stopPropagation();
+      batchFilesInput.click();
+    });
+  }
   runBatch.addEventListener("click", function () { runBatchConvert(false); });
   batchDryRun.addEventListener("click", function () { runBatchConvert(true); });
   copyCliBatch.addEventListener("click", function () { copyText(batchCli()); });
@@ -1207,6 +2031,34 @@
     if (!reverseOut.value) return;
     navigator.clipboard.writeText(reverseOut.value).then(function () {
       showToast(t("toastCopiedMd"));
+    });
+  });
+  if (downloadReverseMd) {
+    downloadReverseMd.addEventListener("click", function () {
+      if (!reverseOut.value.trim()) return;
+      downloadTextFile("document.md", reverseOut.value, "text/markdown;charset=utf-8");
+      showToast(t("toastMdDownloaded"));
+    });
+  }
+  if (reverseClear) {
+    reverseClear.addEventListener("click", clearReverseInput);
+  }
+  const reversePickFile = document.getElementById("reverse-pick-file");
+  if (reversePickFile) {
+    reversePickFile.addEventListener("click", function (e) {
+      e.preventDefault();
+      e.stopPropagation();
+      reverseFile.click();
+    });
+  }
+  ["diff-pick-a", "diff-pick-b"].forEach(function (id) {
+    const btn = document.getElementById(id);
+    if (!btn) return;
+    btn.addEventListener("click", function (e) {
+      e.preventDefault();
+      e.stopPropagation();
+      const input = id === "diff-pick-a" ? diffFileA : diffFileB;
+      input.click();
     });
   });
   sendToConvert.addEventListener("click", function () {
@@ -1232,6 +2084,51 @@
   });
 
   document.addEventListener("keydown", function (e) {
+    if (shortcutsOpen && e.key === "Tab") {
+      const dialog = document.getElementById("shortcuts-dialog");
+      const panel = dialog && dialog.querySelector(".shortcuts-dialog__panel");
+      const focusables = panel
+        ? Array.prototype.slice.call(
+            panel.querySelectorAll(
+              'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+            )
+          )
+        : [];
+      if (focusables.length) {
+        const first = focusables[0];
+        const last = focusables[focusables.length - 1];
+        if (e.shiftKey && document.activeElement === first) {
+          e.preventDefault();
+          last.focus();
+        } else if (!e.shiftKey && document.activeElement === last) {
+          e.preventDefault();
+          first.focus();
+        }
+      }
+    }
+    if (e.key === "Escape") {
+      if (shortcutsOpen) {
+        closeShortcuts();
+        return;
+      }
+      if (!errorEl.classList.contains("hidden")) {
+        showError(null);
+        return;
+      }
+      if (closeOpenOptions()) return;
+    }
+    const typingTarget = e.target && (
+      e.target.tagName === "INPUT" ||
+      e.target.tagName === "TEXTAREA" ||
+      e.target.tagName === "SELECT" ||
+      e.target.isContentEditable
+    );
+    if (!typingTarget && (e.key === "?" || ((e.metaKey || e.ctrlKey) && e.key === "/"))) {
+      e.preventDefault();
+      if (shortcutsOpen) closeShortcuts();
+      else openShortcuts();
+      return;
+    }
     if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
       e.preventDefault();
       if (currentMode === "convert" && !generateBtn.disabled) generateDocx();
@@ -1241,6 +2138,40 @@
     }
   });
 
+  const openShortcutsBtn = document.getElementById("open-shortcuts");
+  if (openShortcutsBtn) {
+    openShortcutsBtn.addEventListener("click", openShortcuts);
+  }
+  const shortcutsCloseBtn = document.getElementById("shortcuts-close");
+  if (shortcutsCloseBtn) {
+    shortcutsCloseBtn.addEventListener("click", closeShortcuts);
+  }
+  document.querySelectorAll("[data-shortcuts-dismiss]").forEach(function (el) {
+    el.addEventListener("click", closeShortcuts);
+  });
+
+  wireRovingGroup(document.querySelector(".mode-nav"), ".mode-nav__btn");
+  wireRovingGroup(document.getElementById("convert-input-mode"), ".segmented__btn");
+  wireRovingGroup(document.getElementById("diff-input-mode"), ".segmented__btn");
+
+  const modeNav = document.getElementById("mode-nav");
+  function syncChromeScroll() {
+    const scrolled = window.scrollY > 6;
+    if (modeNav) modeNav.classList.toggle("mode-nav--scrolled", scrolled);
+    document.querySelectorAll(".toolbar").forEach(function (bar) {
+      if (!bar.classList.contains("hidden") && !bar.hidden) {
+        bar.classList.toggle("toolbar--scrolled", scrolled);
+      } else {
+        bar.classList.remove("toolbar--scrolled");
+      }
+    });
+  }
+  window.addEventListener("scroll", syncChromeScroll, { passive: true });
+  syncChromeScroll();
+  window.addEventListener("online", syncOfflineBanner);
+  window.addEventListener("offline", syncOfflineBanner);
+  syncOfflineBanner();
+
   Promise.all([loadPresets(), loadTemplates()]).then(function () {
     applyI18n();
     markdownEl.value = currentLang === "zh"
@@ -1249,5 +2180,31 @@
     setMode("convert");
     setConvertInputMode("upload");
     updateCharCount();
+    showPreviewEmpty();
+    syncReverseResultView();
+    syncPrimaryActions();
+    document.body.classList.remove("app--booting");
+    document.body.classList.add("app--ready");
+  }).catch(function () {
+    document.body.classList.remove("app--booting");
+    document.body.classList.add("app--ready");
   });
+
+  const tryExampleBtn = document.getElementById("convert-try-example");
+  const switchPasteBtn = document.getElementById("convert-switch-paste");
+  if (tryExampleBtn) {
+    tryExampleBtn.addEventListener("click", function (e) {
+      e.preventDefault();
+      e.stopPropagation();
+      exampleEl.value = "technical-report";
+      loadExample("technical-report");
+    });
+  }
+  if (switchPasteBtn) {
+    switchPasteBtn.addEventListener("click", function (e) {
+      e.preventDefault();
+      e.stopPropagation();
+      setConvertInputMode("paste");
+    });
+  }
 })();

@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Injected UI preview</title>
+  <link rel="stylesheet" href="../src/button.css">
+  <style>
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: system-ui, sans-serif;
+      background: Canvas;
+      color: CanvasText;
+      padding: 24px;
+    }
+    h1 { font-size: 1.1rem; margin: 0 0 8px; }
+    p { margin: 0 0 20px; color: GrayText; font-size: 0.9rem; }
+  </style>
+</head>
+<body>
+  <h1>Injected UI preview</h1>
+  <p>Toggle OS appearance to verify light/dark tokens.</p>
+
+  <button type="button" class="md-to-docx-export-btn">
+    <span class="md-to-docx-md-badge" aria-hidden="true">MD</span>
+    <span class="md-to-docx-btn-label">Export to Word</span>
+  </button>
+
+  <div class="md-to-docx-float md-to-docx-float-open" style="right:24px;bottom:24px;left:auto;top:auto;">
+    <button type="button" class="md-to-docx-float-launcher" aria-expanded="true" aria-label="Export">
+      <span class="md-to-docx-md-badge" aria-hidden="true">MD</span>
+      <span class="md-to-docx-float-status" data-online="1" title="Playground online"></span>
+    </button>
+    <div class="md-to-docx-float-sheet" role="dialog" aria-label="Export">
+      <div class="md-to-docx-float-sheet-header">
+        <span class="md-to-docx-float-sheet-title">Export</span>
+        <button type="button" class="md-to-docx-float-sheet-close" aria-label="Close">×</button>
+      </div>
+      <button type="button" class="md-to-docx-export-btn md-to-docx-float-action">
+        <span class="md-to-docx-md-badge" aria-hidden="true">MD</span>
+        <span class="md-to-docx-float-label">Export to Word</span>
+      </button>
+      <p class="md-to-docx-float-hint">Local Playground</p>
+    </div>
+  </div>
+
+  <div class="md-to-docx-batch-float md-to-docx-batch-float-open md-to-docx-batch-exporting" style="left:24px;bottom:24px;right:auto;top:auto;">
+    <button type="button" class="md-to-docx-batch-launcher" aria-expanded="true">
+      <span class="md-to-docx-md-badge" aria-hidden="true">B</span>
+      <span class="md-to-docx-batch-count-pill">2</span>
+    </button>
+    <div class="md-to-docx-batch-sheet" role="dialog" aria-label="Batch export">
+      <div class="md-to-docx-batch-sheet-header">
+        <div class="md-to-docx-batch-title">Batch export</div>
+        <button type="button" class="md-to-docx-batch-sheet-close" aria-label="Close">×</button>
+      </div>
+      <div class="md-to-docx-batch-count-line"><strong class="md-to-docx-batch-count">2</strong> selected</div>
+      <div class="md-to-docx-batch-hint" hidden>Click Select chats</div>
+      <div class="md-to-docx-batch-progress">
+        <div class="md-to-docx-batch-progress-track">
+          <div class="md-to-docx-batch-progress-bar" style="width:45%"></div>
+        </div>
+        <div class="md-to-docx-batch-progress-label">Exporting 1/2: Alpha chat</div>
+      </div>
+      <div class="md-to-docx-batch-actions">
+        <button type="button" class="md-to-docx-batch-btn-secondary" disabled>Select chats</button>
+        <button type="button" class="md-to-docx-export-btn md-to-docx-batch-export md-to-docx-export-btn--busy" disabled>Exporting…</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="md-to-docx-toast md-to-docx-toast--visible md-to-docx-toast--ok" style="left:24px;top:80px;right:auto;bottom:auto;">
+    Downloaded report.docx
+  </div>
+</body>
+</html>

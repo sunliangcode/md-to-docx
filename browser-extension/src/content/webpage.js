@@ -2,7 +2,7 @@
   function exportPage() {
     const markdown = MdToDocxExtract.extractPageMarkdown(document);
     if (!markdown || !markdown.trim()) {
-      MdToDocxExport.showToast("Could not find exportable content on this page");
+      MdToDocxExport.showToastKey("errNoPageContent", "err");
       return;
     }
     const title = document.title || "webpage";

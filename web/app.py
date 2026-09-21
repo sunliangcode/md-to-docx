@@ -13,6 +13,7 @@ from pathlib import Path
 from typing import Any, Literal
 
 from fastapi import FastAPI, File, HTTPException, Request, UploadFile
+from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse, PlainTextResponse, Response
 from fastapi.staticfiles import StaticFiles
@@ -47,6 +48,7 @@ MAX_BATCH_FILES = 50
 CONVERT_TIMEOUT_SEC = 30
 BATCH_TIMEOUT_SEC = 90
 PREVIEW_TIMEOUT_SEC = 15
+PREVIEW_SOFT_CHARS = 80_000
 
 PLAYGROUND_PRESET_ORDER = [
     "professional",
@@ -126,6 +128,13 @@ class DiffRequest(BaseModel):
 app = FastAPI(title="md-to-docx Playground", version=__version__)
 
 
+@app.exception_handler(RequestValidationError)
+async def request_validation_handler(
+    _request: Request, exc: RequestValidationError
+) -> JSONResponse:
+    return JSONResponse(status_code=422, content={"detail": _validation_detail(exc.errors())})
+
+
 def _cors_allow_list() -> list[str] | None:
     """Return explicit origins, ``['*']``, or ``None`` for loopback-reflect mode."""
     raw = os.environ.get("MD_TO_DOCX_CORS_ORIGINS", "").strip()
@@ -195,6 +204,25 @@ def _detail(problem: str, cause: str, fix: str) -> dict[str, str]:
 
 def _http_error(status: int, problem: str, cause: str, fix: str) -> None:
     raise HTTPException(status_code=status, detail=_detail(problem, cause, fix))
+
+
+def _validation_detail(errors: list[Any]) -> dict[str, str]:
+    """Normalize Pydantic/FastAPI validation errors into problem/cause/fix."""
+    parts: list[str] = []
+    for err in errors[:5]:
+        if not isinstance(err, dict):
+            parts.append(str(err))
+            continue
+        loc_bits = [str(x) for x in err.get("loc", ()) if x != "body"]
+        loc = ".".join(loc_bits)
+        msg = str(err.get("msg") or "invalid")
+        parts.append(f"{loc}: {msg}" if loc else msg)
+    cause = "; ".join(parts) if parts else "validation failed"
+    return _detail(
+        "Invalid request",
+        cause,
+        "Check the highlighted fields and try again",
+    )
 
 
 def _resolve_community_template(key: str | None) -> Path | None:
@@ -340,6 +368,36 @@ def _convert_sync(
 
 
 @app.middleware("http")
+async def security_headers(request: Request, call_next):
+    response = await call_next(request)
+    response.headers.setdefault("X-Content-Type-Options", "nosniff")
+    response.headers.setdefault("Referrer-Policy", "strict-origin-when-cross-origin")
+    response.headers.setdefault("X-Frame-Options", "SAMEORIGIN")
+    response.headers.setdefault(
+        "Permissions-Policy",
+        "camera=(), microphone=(), geolocation=()",
+    )
+    return response
+
+
+@app.middleware("http")
+async def static_cache_headers(request: Request, call_next):
+    response = await call_next(request)
+    path = request.url.path
+    if path.endswith((".css", ".js")):
+        # Versioned assets (?v=) are content-addressed; otherwise avoid sticky stale JS/CSS.
+        if "v=" in (request.url.query or ""):
+            response.headers.setdefault(
+                "Cache-Control", "public, max-age=31536000, immutable"
+            )
+        else:
+            response.headers.setdefault("Cache-Control", "no-cache")
+    elif path in ("/", "/index.html"):
+        response.headers.setdefault("Cache-Control", "no-cache")
+    return response
+
+
+@app.middleware("http")
 async def limit_body_size(request: Request, call_next):
     if request.method == "POST" and request.url.path in {
         "/api/convert",
@@ -374,11 +432,19 @@ def _html_fragment(document) -> tuple[str, str]:
     return body, CALLOUT_CSS
 
 
-def _preview_sync(markdown: str, numbering: bool) -> dict[str, str]:
-    doc = parse_markdown(markdown, source_path=Path("input.md"))
+def _preview_sync(markdown: str, numbering: bool) -> dict[str, Any]:
+    truncated = False
+    source = markdown
+    if len(markdown) > PREVIEW_SOFT_CHARS:
+        cut = markdown.rfind("\n", 0, PREVIEW_SOFT_CHARS)
+        if cut < PREVIEW_SOFT_CHARS // 2:
+            cut = PREVIEW_SOFT_CHARS
+        source = markdown[:cut]
+        truncated = True
+    doc = parse_markdown(source, source_path=Path("input.md"))
     doc = apply_heading_numbers(doc, enabled=numbering)
     html, css = _html_fragment(doc)
-    return {"html": html, "css": css}
+    return {"html": html, "css": css, "truncated": truncated}
 
 
 def _reverse_sync(data: bytes) -> str:
@@ -814,7 +880,7 @@ async def api_convert(request: Request):
     try:
         body = ConvertRequest.model_validate(await request.json())
     except ValidationError as exc:
-        raise HTTPException(status_code=422, detail=exc.errors()) from exc
+        raise HTTPException(status_code=422, detail=_validation_detail(exc.errors())) from exc
     return await _run_convert(
         markdown=body.markdown,
         preset=body.preset,
@@ -1134,10 +1200,20 @@ async def api_diff_files(
 async def get_example(name: str):
     rel = EXAMPLE_FILES.get(name)
     if not rel:
-        raise HTTPException(status_code=404, detail="example not found")
+        _http_error(
+            404,
+            "Example not found",
+            f"unknown example '{name}'",
+            "Pick an example from the dropdown",
+        )
     path = EXAMPLES_DIR / rel
     if not path.is_file():
-        raise HTTPException(status_code=404, detail="example file missing")
+        _http_error(
+            404,
+            "Example missing",
+            f"file not found for '{name}'",
+            "Try another example or paste your own Markdown",
+        )
     return FileResponse(path, media_type="text/markdown; charset=utf-8")
 
 

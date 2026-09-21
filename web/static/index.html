@@ -2,15 +2,23 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="color-scheme" content="light">
+  <meta name="theme-color" content="#ffffff">
+  <meta name="description" content="Convert Markdown to professional Word DOCX in the browser. Private, in-memory conversion.">
   <title>md-to-docx Playground</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%232563eb'/%3E%3Ctext x='16' y='22' text-anchor='middle' fill='white' font-size='15' font-family='system-ui,sans-serif' font-weight='700'%3EM%3C/text%3E%3C/svg%3E">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,400&family=IBM+Plex+Mono:wght@400;500&family=Source+Serif+4:opsz,wght@8..60,600;8..60,700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/app.css">
+  <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,400&family=IBM+Plex+Mono:wght@400;500&family=Source+Serif+4:opsz,wght@8..60,600;8..60,700&display=swap" onload="this.onload=null;this.rel='stylesheet'">
+  <noscript>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,400&family=IBM+Plex+Mono:wght@400;500&family=Source+Serif+4:opsz,wght@8..60,600;8..60,700&display=swap" rel="stylesheet">
+  </noscript>
+  <link rel="stylesheet" href="/app.css?v=20260921r">
 </head>
-<body>
+<body class="app--booting">
   <a class="skip-link" href="#workspace-convert">Skip to content</a>
+  <div id="offline-banner" class="offline-banner hidden" role="status" aria-live="polite" hidden>You are offline</div>
 
   <header class="app-header">
     <div class="app-header__brand">
@@ -19,27 +27,28 @@
     </div>
     <div class="app-header__actions">
       <div class="lang-switch" role="group" id="lang-switch" aria-label="Language">
-        <button type="button" id="lang-en" class="lang-switch__btn" data-lang="en">EN</button>
+        <button type="button" id="lang-en" class="lang-switch__btn" data-lang="en" aria-pressed="false">EN</button>
         <span class="lang-switch__sep" aria-hidden="true">|</span>
-        <button type="button" id="lang-zh" class="lang-switch__btn" data-lang="zh">中文</button>
+        <button type="button" id="lang-zh" class="lang-switch__btn" data-lang="zh" aria-pressed="false">中文</button>
       </div>
       <a class="app-header__link" href="https://github.com/sunliang11/md-to-docx">GitHub</a>
+      <button type="button" class="app-header__link app-header__link--btn" id="open-shortcuts" aria-haspopup="dialog">Shortcuts</button>
     </div>
   </header>
 
-  <nav class="mode-nav" aria-label="Playground mode">
-    <button type="button" class="mode-nav__btn mode-nav__btn--active" data-mode="convert" id="mode-convert">To Word</button>
-    <button type="button" class="mode-nav__btn" data-mode="batch" id="mode-batch">Batch</button>
-    <button type="button" class="mode-nav__btn" data-mode="reverse" id="mode-reverse">From Word</button>
-    <button type="button" class="mode-nav__btn" data-mode="diff" id="mode-diff">Compare</button>
+  <nav class="mode-nav" aria-label="Playground mode" id="mode-nav">
+    <button type="button" class="mode-nav__btn mode-nav__btn--active" data-mode="convert" id="mode-convert" aria-pressed="true" tabindex="0">To Word</button>
+    <button type="button" class="mode-nav__btn" data-mode="batch" id="mode-batch" aria-pressed="false" tabindex="-1">Batch</button>
+    <button type="button" class="mode-nav__btn" data-mode="reverse" id="mode-reverse" aria-pressed="false" tabindex="-1">From Word</button>
+    <button type="button" class="mode-nav__btn" data-mode="diff" id="mode-diff" aria-pressed="false" tabindex="-1">Compare</button>
   </nav>
 
   <!-- ── Convert toolbar ── -->
   <div class="toolbar" id="toolbar-convert" data-mode-panel="convert">
     <div class="toolbar__group">
       <div class="segmented" role="group" id="convert-input-mode" aria-label="Input mode">
-        <button type="button" class="segmented__btn segmented__btn--active" data-input-mode="upload" id="input-mode-upload">Upload</button>
-        <button type="button" class="segmented__btn" data-input-mode="paste" id="input-mode-paste">Paste</button>
+        <button type="button" class="segmented__btn segmented__btn--active" data-input-mode="upload" id="input-mode-upload" aria-pressed="true" tabindex="0">Upload</button>
+        <button type="button" class="segmented__btn" data-input-mode="paste" id="input-mode-paste" aria-pressed="false" tabindex="-1">Paste</button>
       </div>
       <label class="field">
         <span class="field__label" id="i18n-label-example">Example</span>
@@ -68,21 +77,22 @@
         <input type="checkbox" id="numbering">
         <span id="i18n-label-numbering">Heading numbers</span>
       </label>
-      <button type="button" id="toggle-options" class="btn btn--ghost" aria-expanded="false">More options</button>
+      <button type="button" id="toggle-options" class="btn btn--ghost" aria-expanded="false" aria-controls="options-panel">More options</button>
     </div>
     <div class="toolbar__spacer"></div>
     <div class="toolbar__group toolbar__group--actions">
       <button type="button" id="validate" class="btn btn--ghost">
         <span class="btn__label" id="i18n-btn-validate">Check</span>
       </button>
-      <button type="button" id="copy-cli" class="btn btn--ghost">Copy CLI</button>
-      <button type="button" id="generate" class="btn btn--primary">
+      <button type="button" id="copy-cli" class="btn btn--ghost btn--desktop-only">Copy CLI</button>
+      <button type="button" id="generate" class="btn btn--primary" title="">
         <span class="btn__label" id="i18n-btn-export">Export Word</span>
+        <kbd class="btn__kbd" id="generate-kbd" aria-hidden="true"></kbd>
       </button>
     </div>
   </div>
 
-  <div class="options-panel hidden" id="options-panel" data-mode-panel="convert">
+  <div class="options-panel hidden" id="options-panel" data-mode-panel="convert" role="region" aria-label="More options">
     <div class="options-group">
       <h3 class="options-group__title" id="i18n-opt-doc">Document info</h3>
       <div class="options-group__fields">
@@ -189,21 +199,22 @@
         <span class="field__label" id="i18n-label-batch-preset">Style</span>
         <select id="batch-preset" class="field__control"></select>
       </label>
-      <button type="button" id="toggle-batch-options" class="btn btn--ghost" aria-expanded="false">More options</button>
+      <button type="button" id="toggle-batch-options" class="btn btn--ghost" aria-expanded="false" aria-controls="batch-options-panel">More options</button>
     </div>
     <div class="toolbar__spacer"></div>
     <div class="toolbar__group toolbar__group--actions">
       <button type="button" id="batch-dry-run" class="btn btn--ghost">
         <span class="btn__label" id="i18n-btn-dry-run">Preview list</span>
       </button>
-      <button type="button" id="copy-cli-batch" class="btn btn--ghost">Copy CLI</button>
-      <button type="button" id="run-batch" class="btn btn--primary">
+      <button type="button" id="copy-cli-batch" class="btn btn--ghost btn--desktop-only">Copy CLI</button>
+      <button type="button" id="run-batch" class="btn btn--primary" title="">
         <span class="btn__label" id="i18n-btn-batch">Download ZIP</span>
+        <kbd class="btn__kbd" id="run-batch-kbd" aria-hidden="true"></kbd>
       </button>
     </div>
   </div>
 
-  <div class="options-panel hidden" id="batch-options-panel" data-mode-panel="batch">
+  <div class="options-panel hidden" id="batch-options-panel" data-mode-panel="batch" role="region" aria-label="More options">
     <div class="options-group">
       <h3 class="options-group__title" id="i18n-batch-opt-rules">Which files</h3>
       <div class="options-group__fields options-group__fields--wide">
@@ -254,10 +265,11 @@
   <div class="toolbar hidden" id="toolbar-reverse" data-mode-panel="reverse">
     <div class="toolbar__spacer"></div>
     <div class="toolbar__group toolbar__group--actions">
-      <button type="button" id="copy-cli-reverse" class="btn btn--ghost">Copy CLI</button>
+      <button type="button" id="copy-cli-reverse" class="btn btn--ghost btn--desktop-only">Copy CLI</button>
       <button type="button" id="send-to-convert" class="btn btn--ghost" disabled>Send to Word</button>
-      <button type="button" id="run-reverse" class="btn btn--primary">
+      <button type="button" id="run-reverse" class="btn btn--primary" title="">
         <span class="btn__label" id="i18n-btn-reverse">Convert to Markdown</span>
+        <kbd class="btn__kbd" id="run-reverse-kbd" aria-hidden="true"></kbd>
       </button>
     </div>
   </div>
@@ -266,22 +278,23 @@
   <div class="toolbar hidden" id="toolbar-diff" data-mode-panel="diff">
     <div class="toolbar__group">
       <div class="segmented" role="group" id="diff-input-mode" aria-label="Diff input">
-        <button type="button" class="segmented__btn segmented__btn--active" data-diff-mode="upload" id="diff-mode-upload">Upload</button>
-        <button type="button" class="segmented__btn" data-diff-mode="paste" id="diff-mode-paste">Paste</button>
+        <button type="button" class="segmented__btn segmented__btn--active" data-diff-mode="upload" id="diff-mode-upload" aria-pressed="true" tabindex="0">Upload</button>
+        <button type="button" class="segmented__btn" data-diff-mode="paste" id="diff-mode-paste" aria-pressed="false" tabindex="-1">Paste</button>
       </div>
       <button type="button" id="load-diff-sample" class="btn btn--ghost">Load sample</button>
-      <button type="button" id="toggle-diff-options" class="btn btn--ghost" aria-expanded="false">More options</button>
+      <button type="button" id="toggle-diff-options" class="btn btn--ghost" aria-expanded="false" aria-controls="diff-options-panel">More options</button>
     </div>
     <div class="toolbar__spacer"></div>
     <div class="toolbar__group toolbar__group--actions">
-      <button type="button" id="copy-cli-diff" class="btn btn--ghost">Copy CLI</button>
-      <button type="button" id="run-diff" class="btn btn--primary">
+      <button type="button" id="copy-cli-diff" class="btn btn--ghost btn--desktop-only">Copy CLI</button>
+      <button type="button" id="run-diff" class="btn btn--primary" title="">
         <span class="btn__label" id="i18n-btn-diff">Compare</span>
+        <kbd class="btn__kbd" id="run-diff-kbd" aria-hidden="true"></kbd>
       </button>
     </div>
   </div>
 
-  <div class="options-panel hidden" id="diff-options-panel" data-mode-panel="diff">
+  <div class="options-panel hidden" id="diff-options-panel" data-mode-panel="diff" role="region" aria-label="More options">
     <label class="field">
       <span class="field__label" id="i18n-label-diff-format">Output format</span>
       <select id="diff-format" class="field__control">
@@ -299,6 +312,7 @@
       <p class="error-panel__problem" id="error-problem"></p>
       <p class="error-panel__cause" id="error-cause"></p>
       <p class="error-panel__fix" id="error-fix"></p>
+      <button type="button" class="btn btn--ghost btn--small error-panel__retry" id="error-retry">Try again</button>
     </div>
     <button type="button" class="error-panel__dismiss" id="error-dismiss" aria-label="Dismiss error">×</button>
   </div>
@@ -321,6 +335,11 @@
         <input type="file" id="convert-file" class="dropzone__input" accept=".md,text/markdown,text/plain">
         <p class="dropzone__title" id="i18n-convert-drop-title">Drop a .md file here</p>
         <p class="dropzone__hint" id="i18n-convert-drop-hint">or click to choose · max 400KB</p>
+        <div class="dropzone__actions">
+          <button type="button" class="btn btn--ghost btn--small" id="convert-pick-file">Choose file</button>
+          <button type="button" class="btn btn--ghost btn--small" id="convert-try-example">Try an example</button>
+          <button type="button" class="btn btn--ghost btn--small" id="convert-switch-paste">Paste instead</button>
+        </div>
       </div>
     </section>
     <section class="pane pane--editor hidden" id="convert-pane-editor">
@@ -335,6 +354,7 @@
         <h2 class="pane__title" id="i18n-pane-preview">Preview</h2>
         <div class="pane__badges">
           <span class="pane__badge" id="preview-preset"></span>
+          <span class="pane__badge pane__badge--warn hidden" id="preview-truncated" hidden></span>
           <span class="pane__badge" id="i18n-badge-approx">Approximation</span>
         </div>
       </div>
@@ -353,14 +373,18 @@
         <input type="file" id="batch-files" class="dropzone__input" accept=".md,.zip" multiple>
         <p class="dropzone__title" id="i18n-batch-drop-title">Drop .md files or a .zip</p>
         <p class="dropzone__hint" id="i18n-batch-drop-hint">Multiple Markdown files, or one zip folder · max 10MB</p>
+        <div class="dropzone__actions">
+          <button type="button" class="btn btn--ghost btn--small" id="batch-pick-files">Choose files</button>
+        </div>
       </div>
       <ul id="batch-file-list" class="file-list hidden"></ul>
     </section>
     <section class="pane pane--preview">
       <div class="pane__header">
         <h2 class="pane__title" id="i18n-pane-batch-out">Plan</h2>
+        <span class="pane__meta" id="batch-meta" hidden></span>
       </div>
-      <pre id="batch-out" class="diff-out"></pre>
+      <div id="batch-out" class="diff-out" role="region" aria-live="polite"></div>
     </section>
   </div>
 
@@ -369,20 +393,27 @@
     <section class="pane pane--editor">
       <div class="pane__header">
         <h2 class="pane__title" id="i18n-pane-reverse-in">Upload Word</h2>
+        <button type="button" id="reverse-clear" class="btn btn--ghost btn--small" hidden>Clear</button>
       </div>
       <div class="dropzone dropzone--active" id="reverse-dropzone">
         <input type="file" id="reverse-file" class="dropzone__input" accept=".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document">
         <p class="dropzone__title" id="i18n-reverse-drop-title">Drop a .docx file here</p>
         <p class="dropzone__hint" id="i18n-reverse-empty">or click to choose · max 2MB · stays in memory only</p>
         <p class="dropzone__file" id="reverse-file-name" hidden></p>
+        <div class="dropzone__actions">
+          <button type="button" class="btn btn--ghost btn--small" id="reverse-pick-file">Choose .docx</button>
+        </div>
       </div>
     </section>
     <section class="pane pane--preview">
       <div class="pane__header">
         <h2 class="pane__title" id="i18n-pane-reverse-out">Markdown</h2>
-        <button type="button" id="copy-reverse-md" class="btn btn--ghost" disabled>Copy</button>
+        <span class="pane__meta" id="reverse-meta" hidden></span>
+        <button type="button" id="download-reverse-md" class="btn btn--ghost btn--small" disabled>Download</button>
+        <button type="button" id="copy-reverse-md" class="btn btn--ghost btn--small" disabled>Copy</button>
       </div>
-      <textarea id="reverse-out" class="result-text" readonly placeholder=""></textarea>
+      <div id="reverse-empty" class="diff-out" role="status"></div>
+      <textarea id="reverse-out" class="result-text hidden" readonly hidden placeholder=""></textarea>
     </section>
   </div>
 
@@ -395,8 +426,11 @@
       <div class="dropzone dropzone--active dropzone--compact" id="diff-drop-a">
         <input type="file" id="diff-file-a" class="dropzone__input" accept=".md,.docx">
         <p class="dropzone__title" id="i18n-diff-drop-a">Drop version A</p>
-        <p class="dropzone__hint">.md or .docx</p>
+        <p class="dropzone__hint" id="i18n-diff-drop-hint-a">.md or .docx</p>
         <p class="dropzone__file" id="diff-file-a-name" hidden></p>
+        <div class="dropzone__actions">
+          <button type="button" class="btn btn--ghost btn--small" id="diff-pick-a">Choose file</button>
+        </div>
       </div>
       <textarea id="diff-a" class="diff-input hidden" spellcheck="false"></textarea>
     </section>
@@ -407,16 +441,20 @@
       <div class="dropzone dropzone--active dropzone--compact" id="diff-drop-b">
         <input type="file" id="diff-file-b" class="dropzone__input" accept=".md,.docx">
         <p class="dropzone__title" id="i18n-diff-drop-b">Drop version B</p>
-        <p class="dropzone__hint">.md or .docx</p>
+        <p class="dropzone__hint" id="i18n-diff-drop-hint-b">.md or .docx</p>
         <p class="dropzone__file" id="diff-file-b-name" hidden></p>
+        <div class="dropzone__actions">
+          <button type="button" class="btn btn--ghost btn--small" id="diff-pick-b">Choose file</button>
+        </div>
       </div>
       <textarea id="diff-b" class="diff-input hidden" spellcheck="false"></textarea>
     </section>
     <section class="pane pane--preview pane--diff-out">
       <div class="pane__header">
         <h2 class="pane__title" id="i18n-pane-diff-out">Changes</h2>
+        <span class="pane__meta" id="diff-meta" hidden></span>
       </div>
-      <pre id="diff-out" class="diff-out"></pre>
+      <div id="diff-out" class="diff-out" role="region" aria-live="polite"></div>
     </section>
   </div>
 
@@ -430,8 +468,21 @@
   </footer>
 
   <div id="toast" class="toast hidden" role="status" aria-live="polite"></div>
+  <div id="status-live" class="sr-only" role="status" aria-live="polite"></div>
 
-  <script src="/i18n.js"></script>
-  <script src="/app.js"></script>
+  <div id="shortcuts-dialog" class="shortcuts-dialog hidden" role="dialog" aria-modal="true" aria-labelledby="shortcuts-title" hidden>
+    <div class="shortcuts-dialog__backdrop" data-shortcuts-dismiss></div>
+    <div class="shortcuts-dialog__panel" role="document">
+      <div class="shortcuts-dialog__head">
+        <h2 class="shortcuts-dialog__title" id="shortcuts-title">Keyboard shortcuts</h2>
+        <button type="button" class="shortcuts-dialog__close" id="shortcuts-close" aria-label="Close">×</button>
+      </div>
+      <ul class="shortcuts-dialog__list" id="shortcuts-list"></ul>
+      <p class="shortcuts-dialog__hint" id="shortcuts-hint">Press Esc to close</p>
+    </div>
+  </div>
+
+  <script src="/i18n.js?v=20260921r"></script>
+  <script src="/app.js?v=20260921r"></script>
 </body>
 </html>

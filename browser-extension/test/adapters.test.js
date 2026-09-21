@@ -64,6 +64,7 @@ function runAdapter(dom, adapterFile, withBatch) {
   loadHtmlToMd(dom);
   runInWindow(dom, "src/lib/extract.js");
   runInWindow(dom, "src/lib/observe.js");
+  runInWindow(dom, "src/lib/i18n.js");
   runInWindow(dom, "src/lib/export.js");
   if (withBatch) runInWindow(dom, "src/lib/batch.js");
   dom.window.module = { exports: {} };
@@ -160,6 +161,7 @@ test("export labels switch with probe cache helper", async () => {
     fetchCalls += 1;
     return { ok: true };
   };
+  runInWindow(dom, "src/lib/i18n.js");
   runInWindow(dom, "src/lib/export.js");
   assert.equal(dom.window.MdToDocxExport.exportLabel(true), "Export to Word");
   assert.equal(dom.window.MdToDocxExport.exportLabel(false), "Export MD");
@@ -199,6 +201,7 @@ test("showFloating defaults to true", () => {
   const dom = createDom("<body></body>");
   loadHtmlToMd(dom);
   runInWindow(dom, "src/lib/extract.js");
+  runInWindow(dom, "src/lib/i18n.js");
   runInWindow(dom, "src/lib/export.js");
   assert.equal(dom.window.MdToDocxExport.DEFAULTS.showFloating, true);
 });
@@ -223,6 +226,7 @@ test("floating button remounts after SPA removes it", async () => {
   loadHtmlToMd(dom);
   runInWindow(dom, "src/lib/extract.js");
   runInWindow(dom, "src/lib/observe.js");
+  runInWindow(dom, "src/lib/i18n.js");
   runInWindow(dom, "src/lib/export.js");
 
   dom.window.MdToDocxExport.injectFloatingButton(() => {});
@@ -299,6 +303,7 @@ test("injectFloatingButton builds close icon without innerHTML", async () => {
   loadHtmlToMd(dom);
   runInWindow(dom, "src/lib/extract.js");
   runInWindow(dom, "src/lib/observe.js");
+  runInWindow(dom, "src/lib/i18n.js");
   runInWindow(dom, "src/lib/export.js");
 
   dom.window.MdToDocxExport.injectFloatingButton(() => {});
@@ -334,6 +339,7 @@ test("getSettings degrades when extension context is dead", async () => {
     },
     runtime: {},
   };
+  runInWindow(dom, "src/lib/i18n.js");
   runInWindow(dom, "src/lib/export.js");
   assert.equal(dom.window.MdToDocxExport.isExtensionAlive(), false);
   const settings = await dom.window.MdToDocxExport.getSettings();
@@ -346,6 +352,7 @@ test("batch select panel lists sidebar chats and updates count", () => {
   loadHtmlToMd(dom);
   runInWindow(dom, "src/lib/extract.js");
   runInWindow(dom, "src/lib/observe.js");
+  runInWindow(dom, "src/lib/i18n.js");
   runInWindow(dom, "src/lib/export.js");
   runInWindow(dom, "src/lib/batch.js");
   dom.window.module = { exports: {} };
@@ -361,6 +368,11 @@ test("batch select panel lists sidebar chats and updates count", () => {
 
   assert.ok(dom.window.document.querySelector(".md-to-docx-batch-float"));
   assert.ok(dom.window.document.querySelector(".md-to-docx-batch-launcher"));
+  assert.ok(dom.window.document.querySelector(".md-to-docx-batch-progress"));
+  assert.equal(
+    dom.window.document.querySelector(".md-to-docx-batch-progress").hidden,
+    true
+  );
   assert.match(
     dom.window.document.querySelector(".md-to-docx-batch-hint").textContent,
     /Select chats/
@@ -401,6 +413,80 @@ test("batch select panel lists sidebar chats and updates count", () => {
   const pill = dom.window.document.querySelector(".md-to-docx-batch-count-pill");
   assert.equal(pill.hidden, false);
   assert.equal(pill.textContent, "1");
+
+  const selectAll = panel.querySelector(".md-to-docx-batch-select-all");
+  assert.ok(selectAll);
+  selectAll.click();
+  assert.equal(api.getSelected().length, 2);
+  assert.equal(
+    dom.window.document.querySelector(".md-to-docx-batch-count").textContent,
+    "2"
+  );
+});
+
+test("batch export shows in-sheet progress while running", async () => {
+  const dom = loadFixture("chatgpt-sample.html", "https://chatgpt.com/");
+  loadHtmlToMd(dom);
+  runInWindow(dom, "src/lib/extract.js");
+  runInWindow(dom, "src/lib/observe.js");
+  runInWindow(dom, "src/lib/i18n.js");
+  runInWindow(dom, "src/lib/export.js");
+  runInWindow(dom, "src/lib/batch.js");
+  dom.window.module = { exports: {} };
+  runInWindow(dom, "src/content/chatgpt.js");
+  const adapter = dom.window.module.exports;
+
+  let releaseOpen;
+  const openGate = new Promise((resolve) => {
+    releaseOpen = resolve;
+  });
+  let extractCalls = 0;
+
+  const api = dom.window.MdToDocxBatch.setupBatchExport({
+    listSidebarConversations: adapter.listSidebarConversations,
+    openConversation: async () => {
+      dom.window.history.pushState({}, "", "/c/alpha-batch");
+      await openGate;
+    },
+    extractConversationMarkdown: () => {
+      extractCalls += 1;
+      return {
+        title: "Alpha chat",
+        markdown: "# Alpha chat\n\nhello batch " + extractCalls,
+      };
+    },
+    isConversationReady: () => true,
+  });
+
+  dom.window.MdToDocxExport.convertAndDownload = async () => {};
+
+  api.openPanel();
+  const panel = dom.window.document.querySelector(".md-to-docx-batch-panel");
+  const row = panel.querySelector(".md-to-docx-batch-row");
+  const cb = row.querySelector("input[type=checkbox]");
+  cb.checked = true;
+  cb.dispatchEvent(new dom.window.Event("change", { bubbles: true }));
+  api.closePanel();
+
+  const wrap = dom.window.document.querySelector(".md-to-docx-batch-float");
+  const progress = wrap.querySelector(".md-to-docx-batch-progress");
+  const label = wrap.querySelector(".md-to-docx-batch-progress-label");
+  const exportBtn = wrap.querySelector(".md-to-docx-batch-export");
+  exportBtn.click();
+
+  await new Promise((resolve) => setTimeout(resolve, 20));
+  assert.equal(progress.hidden, false);
+  assert.ok(wrap.classList.contains("md-to-docx-batch-exporting"));
+  assert.ok(wrap.classList.contains("md-to-docx-batch-float-open"));
+  assert.match(label.textContent, /Exporting 1\/1/);
+
+  releaseOpen();
+  const deadline = Date.now() + 2000;
+  while (!progress.hidden && Date.now() < deadline) {
+    await new Promise((resolve) => setTimeout(resolve, 20));
+  }
+  assert.equal(progress.hidden, true);
+  assert.equal(wrap.classList.contains("md-to-docx-batch-exporting"), false);
 });
 
 test("gemini adapter interleaves user and assistant turns", () => {
@@ -417,4 +503,15 @@ test("gemini adapter interleaves user and assistant turns", () => {
   assert.ok(userIdx2 > asstIdx1 && asstIdx2 > userIdx2);
   // Must not dump all users before all assistants
   assert.ok(asstIdx1 < userIdx2);
+});
+
+test("inject UI strings follow MdToDocxI18n locale", () => {
+  const dom = createDom("<html><body></body></html>");
+  runInWindow(dom, "src/lib/i18n.js");
+  runInWindow(dom, "src/lib/export.js");
+  assert.equal(dom.window.MdToDocxExport.exportLabel(true), "Export to Word");
+  dom.window.MdToDocxI18n.setLocale("zh");
+  assert.equal(dom.window.MdToDocxExport.exportLabel(true), "导出为 Word");
+  assert.equal(dom.window.MdToDocxExport.exportLabel(false), "导出 MD");
+  assert.match(dom.window.MdToDocxI18n.t("batchSelect"), /选择对话/);
 });

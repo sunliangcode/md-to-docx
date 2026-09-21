@@ -5,6 +5,13 @@
   const DRAG_THRESHOLD = 4;
   const SELECTED = new Map(); // id -> { id, title, el, anchor }
 
+  function t(key, vars) {
+    if (global.MdToDocxI18n && typeof global.MdToDocxI18n.t === "function") {
+      return global.MdToDocxI18n.t(key, vars);
+    }
+    return key;
+  }
+
   function wait(ms) {
     return new Promise((resolve) => setTimeout(resolve, ms));
   }
@@ -138,12 +145,32 @@
 
   function setFloatOpen(wrap, open) {
     const isOpen = !!open;
+    const wasOpen = wrap.classList.contains("md-to-docx-batch-float-open");
     wrap.classList.toggle("md-to-docx-batch-float-open", isOpen);
     const launcher = wrap.querySelector(".md-to-docx-batch-launcher");
+    const sheet = wrap.querySelector(".md-to-docx-batch-sheet");
     if (launcher) {
       launcher.setAttribute("aria-expanded", isOpen ? "true" : "false");
     }
-    if (isOpen) positionBatchSheet(wrap);
+    if (isOpen) {
+      if (!wasOpen) wrap._mdPrevFocus = document.activeElement;
+      positionBatchSheet(wrap);
+      if (sheet && global.MdToDocxExport && global.MdToDocxExport.focusFirst) {
+        requestAnimationFrame(function () {
+          global.MdToDocxExport.focusFirst(sheet);
+        });
+      }
+    } else if (wasOpen) {
+      const prev = wrap._mdPrevFocus;
+      wrap._mdPrevFocus = null;
+      if (global.MdToDocxExport && global.MdToDocxExport.restoreFocus) {
+        global.MdToDocxExport.restoreFocus(prev, launcher);
+      } else if (launcher) {
+        try {
+          launcher.focus();
+        } catch (_) {}
+      }
+    }
   }
 
   function closeSheet() {
@@ -239,15 +266,16 @@
     if (hint) {
       hint.textContent =
         n === 0
-          ? "Click Select chats, then tick items"
-          : n + " chat" + (n === 1 ? "" : "s") + " selected";
+          ? t("batchHintEmpty")
+          : t(n === 1 ? "batchHintSelected" : "batchHintSelectedPlural", { n: n });
     }
-    if (exportBtn) {
+    if (exportBtn && !wrap.classList.contains("md-to-docx-batch-exporting")) {
       exportBtn.disabled = n === 0;
-      exportBtn.textContent = "Export (" + n + ")";
+      exportBtn.textContent = t("batchExport", { n: n });
     }
     if (clearBtn) {
       clearBtn.hidden = n === 0;
+      clearBtn.textContent = t("batchClear");
     }
     if (pill) {
       if (n > 0) {
@@ -257,6 +285,52 @@
         pill.hidden = true;
         pill.textContent = "";
       }
+    }
+    refreshBatchStaticCopy(wrap);
+  }
+
+  function refreshBatchStaticCopy(wrap) {
+    if (!wrap) return;
+    wrap.setAttribute("aria-label", t("batchRegion"));
+    const launcher = wrap.querySelector(".md-to-docx-batch-launcher");
+    if (launcher) {
+      const tip = t("batchDrag");
+      launcher.title = tip;
+      launcher.setAttribute("aria-label", tip);
+    }
+    const sheet = wrap.querySelector(".md-to-docx-batch-sheet");
+    if (sheet) sheet.setAttribute("aria-label", t("batchTitle"));
+    const title = wrap.querySelector(".md-to-docx-batch-title");
+    if (title) title.textContent = t("batchTitle");
+    const close = wrap.querySelector(".md-to-docx-batch-sheet-close");
+    if (close) close.setAttribute("aria-label", t("close"));
+    const countLine = wrap.querySelector(".md-to-docx-batch-count-line");
+    if (countLine) {
+      const strong = countLine.querySelector(".md-to-docx-batch-count");
+      const n = strong ? strong.textContent : "0";
+      countLine.textContent = "";
+      const s = createEl("strong", "md-to-docx-batch-count", n);
+      countLine.appendChild(s);
+      countLine.appendChild(document.createTextNode(t("batchSelectedSuffix")));
+    }
+    const selectBtn = wrap.querySelector(".md-to-docx-batch-select");
+    if (selectBtn) selectBtn.textContent = t("batchSelect");
+
+    const panel = document.querySelector("." + PANEL_CLASS);
+    if (panel) {
+      panel.setAttribute("aria-label", t("batchPanelTitle"));
+      const panelTitle = panel.querySelector(".md-to-docx-batch-panel-title");
+      if (panelTitle) panelTitle.textContent = t("batchPanelTitle");
+      const panelClose = panel.querySelector(".md-to-docx-batch-panel-close");
+      if (panelClose) panelClose.setAttribute("aria-label", t("close"));
+      const refreshBtn = panel.querySelector(".md-to-docx-batch-refresh");
+      if (refreshBtn) refreshBtn.textContent = t("batchRefresh");
+      const selectAllBtn = panel.querySelector(".md-to-docx-batch-select-all");
+      if (selectAllBtn) selectAllBtn.textContent = t("batchSelectAll");
+      const doneBtn = panel.querySelector(".md-to-docx-batch-done");
+      if (doneBtn) doneBtn.textContent = t("batchDone");
+      const empty = panel.querySelector(".md-to-docx-batch-empty");
+      if (empty) empty.textContent = t("batchEmpty");
     }
   }
 
@@ -286,14 +360,14 @@
 
     wrap = createEl("div", FLOAT_CLASS);
     wrap.setAttribute("role", "region");
-    wrap.setAttribute("aria-label", "Batch export");
+    wrap.setAttribute("aria-label", t("batchRegion"));
 
     const launcher = createEl("button", "md-to-docx-batch-launcher");
     launcher.type = "button";
     launcher.setAttribute("aria-expanded", "false");
     launcher.setAttribute("aria-haspopup", "dialog");
-    launcher.title = "Batch export (drag to move)";
-    launcher.setAttribute("aria-label", "Batch export (drag to move)");
+    launcher.title = t("batchDrag");
+    launcher.setAttribute("aria-label", t("batchDrag"));
     launcher.appendChild(createBatchBadge());
     const pill = createEl("span", "md-to-docx-batch-count-pill");
     pill.hidden = true;
@@ -301,39 +375,54 @@
 
     const sheet = createEl("div", "md-to-docx-batch-sheet");
     sheet.setAttribute("role", "dialog");
-    sheet.setAttribute("aria-label", "Batch export");
+    sheet.setAttribute("aria-modal", "true");
+    sheet.setAttribute("aria-label", t("batchTitle"));
 
     const header = createEl("div", "md-to-docx-batch-sheet-header");
-    header.appendChild(createEl("div", "md-to-docx-batch-title", "Batch export"));
+    const sheetTitle = createEl("div", "md-to-docx-batch-title", t("batchTitle"));
+    sheetTitle.id = "md-to-docx-batch-sheet-title";
+    header.appendChild(sheetTitle);
     const closeBtn = createEl("button", "md-to-docx-batch-sheet-close");
     closeBtn.type = "button";
-    closeBtn.setAttribute("aria-label", "Close");
+    closeBtn.setAttribute("aria-label", t("close"));
     closeBtn.appendChild(createCloseIcon());
     header.appendChild(closeBtn);
 
     const countLine = createEl("div", "md-to-docx-batch-count-line");
     countLine.appendChild(createEl("strong", "md-to-docx-batch-count", "0"));
-    countLine.appendChild(document.createTextNode(" selected"));
+    countLine.appendChild(document.createTextNode(t("batchSelectedSuffix")));
 
-    const hint = createEl(
-      "div",
-      "md-to-docx-batch-hint",
-      "Click Select chats, then tick items"
-    );
+    const hint = createEl("div", "md-to-docx-batch-hint", t("batchHintEmpty"));
+
+    const progress = createEl("div", "md-to-docx-batch-progress");
+    progress.hidden = true;
+    progress.setAttribute("aria-hidden", "true");
+    const progressTrack = createEl("div", "md-to-docx-batch-progress-track");
+    const progressBar = createEl("div", "md-to-docx-batch-progress-bar");
+    progressBar.setAttribute("role", "progressbar");
+    progressBar.setAttribute("aria-valuemin", "0");
+    progressBar.setAttribute("aria-valuemax", "100");
+    progressBar.setAttribute("aria-valuenow", "0");
+    progressBar.style.width = "0%";
+    progressTrack.appendChild(progressBar);
+    const progressLabel = createEl("div", "md-to-docx-batch-progress-label");
+    progressLabel.setAttribute("aria-live", "polite");
+    progress.appendChild(progressTrack);
+    progress.appendChild(progressLabel);
 
     const actions = createEl("div", "md-to-docx-batch-actions");
 
     const selectBtn = createEl(
       "button",
       "md-to-docx-batch-select md-to-docx-batch-btn-secondary",
-      "Select chats"
+      t("batchSelect")
     );
     selectBtn.type = "button";
 
     const clearBtn = createEl(
       "button",
       "md-to-docx-batch-clear md-to-docx-batch-btn-secondary",
-      "Clear"
+      t("batchClear")
     );
     clearBtn.type = "button";
     clearBtn.hidden = true;
@@ -341,7 +430,7 @@
     const exportBtn = createEl(
       "button",
       "md-to-docx-export-btn md-to-docx-batch-export",
-      "Export (0)"
+      t("batchExport", { n: 0 })
     );
     exportBtn.type = "button";
     exportBtn.disabled = true;
@@ -350,9 +439,11 @@
     actions.appendChild(clearBtn);
     actions.appendChild(exportBtn);
 
+    sheet.setAttribute("aria-labelledby", sheetTitle.id);
     sheet.appendChild(header);
     sheet.appendChild(countLine);
     sheet.appendChild(hint);
+    sheet.appendChild(progress);
     sheet.appendChild(actions);
 
     wrap.appendChild(launcher);
@@ -363,12 +454,14 @@
       e.preventDefault();
       e.stopPropagation();
       if (wrap.dataset.dragged === "1") return;
+      if (wrap.classList.contains("md-to-docx-batch-exporting")) return;
       setFloatOpen(wrap, !wrap.classList.contains("md-to-docx-batch-float-open"));
     });
 
     closeBtn.addEventListener("click", (e) => {
       e.preventDefault();
       e.stopPropagation();
+      if (wrap.classList.contains("md-to-docx-batch-exporting")) return;
       closeSheet();
     });
 
@@ -391,7 +484,7 @@
       e.preventDefault();
       e.stopPropagation();
       closePanel();
-      closeSheet();
+      setFloatOpen(wrap, true);
       runBatchExport(hooks);
     });
 
@@ -399,6 +492,7 @@
       "pointerdown",
       (e) => {
         if (!wrap.classList.contains("md-to-docx-batch-float-open")) return;
+        if (wrap.classList.contains("md-to-docx-batch-exporting")) return;
         const panel = document.querySelector("." + PANEL_CLASS);
         if (panel && !panel.hidden) return;
         if (wrap.contains(e.target)) return;
@@ -440,15 +534,18 @@
 
     panel = createEl("div", PANEL_CLASS);
     panel.setAttribute("role", "dialog");
-    panel.setAttribute("aria-label", "Select chats");
+    panel.setAttribute("aria-modal", "true");
+    panel.setAttribute("aria-label", t("batchPanelTitle"));
     panel.hidden = true;
 
     const header = createEl("div", "md-to-docx-batch-panel-header");
-    header.appendChild(createEl("div", "md-to-docx-batch-panel-title", "Select chats"));
+    const panelTitle = createEl("div", "md-to-docx-batch-panel-title", t("batchPanelTitle"));
+    panelTitle.id = "md-to-docx-batch-panel-title";
+    header.appendChild(panelTitle);
 
     const closeBtn = createEl("button", "md-to-docx-batch-panel-close");
     closeBtn.type = "button";
-    closeBtn.setAttribute("aria-label", "Close");
+    closeBtn.setAttribute("aria-label", t("close"));
     closeBtn.appendChild(createCloseIcon());
     closeBtn.addEventListener("click", (e) => {
       e.preventDefault();
@@ -462,10 +559,11 @@
     body.appendChild(list);
 
     const footer = createEl("div", "md-to-docx-batch-panel-footer");
+    const footerLeft = createEl("div", "md-to-docx-batch-panel-footer-left");
     const refreshBtn = createEl(
       "button",
       "md-to-docx-batch-refresh md-to-docx-batch-btn-secondary",
-      "Refresh list"
+      t("batchRefresh")
     );
     refreshBtn.type = "button";
     refreshBtn.addEventListener("click", (e) => {
@@ -474,7 +572,32 @@
       renderPanelList(panel, hooks);
     });
 
-    const doneBtn = createEl("button", "md-to-docx-export-btn md-to-docx-batch-done", "Done");
+    const selectAllBtn = createEl(
+      "button",
+      "md-to-docx-batch-select-all md-to-docx-batch-btn-secondary",
+      t("batchSelectAll")
+    );
+    selectAllBtn.type = "button";
+    selectAllBtn.addEventListener("click", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      const items =
+        (hooks && typeof hooks.listSidebarConversations === "function"
+          ? hooks.listSidebarConversations()
+          : []) || [];
+      for (let i = 0; i < items.length; i++) {
+        SELECTED.set(items[i].id, items[i]);
+      }
+      const wrap = document.querySelector("." + FLOAT_CLASS);
+      updateBar(wrap);
+      renderPanelList(panel, hooks);
+    });
+
+    const doneBtn = createEl(
+      "button",
+      "md-to-docx-export-btn md-to-docx-batch-done",
+      t("batchDone")
+    );
     doneBtn.type = "button";
     doneBtn.addEventListener("click", (e) => {
       e.preventDefault();
@@ -482,9 +605,12 @@
       closePanel();
     });
 
-    footer.appendChild(refreshBtn);
+    footerLeft.appendChild(refreshBtn);
+    footerLeft.appendChild(selectAllBtn);
+    footer.appendChild(footerLeft);
     footer.appendChild(doneBtn);
 
+    panel.setAttribute("aria-labelledby", panelTitle.id);
     panel.appendChild(header);
     panel.appendChild(body);
     panel.appendChild(footer);
@@ -504,11 +630,7 @@
 
     if (!items.length) {
       list.appendChild(
-        createEl(
-          "div",
-          "md-to-docx-batch-empty",
-          "No chats found. Scroll the site sidebar to load more, then Refresh."
-        )
+        createEl("div", "md-to-docx-batch-empty", t("batchEmpty"))
       );
       return;
     }
@@ -547,28 +669,88 @@
     const wrap = document.querySelector("." + FLOAT_CLASS);
     if (wrap) setFloatOpen(wrap, true);
     renderPanelList(panel, hooks);
+    panel._mdPrevFocus = document.activeElement;
     backdrop.hidden = false;
     panel.hidden = false;
+    // Force reflow so the enter transition runs after un-hiding.
+    void panel.offsetWidth;
+    backdrop.classList.add("md-to-docx-batch-backdrop--visible");
+    panel.classList.add("md-to-docx-batch-panel--visible");
     if (wrap) positionPanelNearFloat(panel, wrap);
+    if (global.MdToDocxExport && global.MdToDocxExport.focusFirst) {
+      requestAnimationFrame(function () {
+        global.MdToDocxExport.focusFirst(panel);
+      });
+    }
   }
 
   function closePanel() {
     const panel = document.querySelector("." + PANEL_CLASS);
     const backdrop = document.querySelector("." + BACKDROP_CLASS);
-    if (panel) panel.hidden = true;
-    if (backdrop) backdrop.hidden = true;
+    const wrap = document.querySelector("." + FLOAT_CLASS);
+    const launcher = wrap && wrap.querySelector(".md-to-docx-batch-launcher");
+    const prev = panel && panel._mdPrevFocus;
+
+    function finishHide() {
+      if (panel) {
+        panel.hidden = true;
+        panel._mdPrevFocus = null;
+        panel.classList.remove("md-to-docx-batch-panel--visible");
+      }
+      if (backdrop) {
+        backdrop.hidden = true;
+        backdrop.classList.remove("md-to-docx-batch-backdrop--visible");
+      }
+      if (global.MdToDocxExport && global.MdToDocxExport.restoreFocus) {
+        global.MdToDocxExport.restoreFocus(prev, launcher);
+      }
+    }
+
+    if (!panel || panel.hidden) {
+      finishHide();
+      return;
+    }
+
+    panel.classList.remove("md-to-docx-batch-panel--visible");
+    if (backdrop) backdrop.classList.remove("md-to-docx-batch-backdrop--visible");
+
+    let done = false;
+    const complete = () => {
+      if (done) return;
+      done = true;
+      finishHide();
+    };
+    panel.addEventListener("transitionend", complete, { once: true });
+    setTimeout(complete, 220);
   }
 
   function onDocKeyDown(e) {
-    if (e.key !== "Escape") return;
     const panel = document.querySelector("." + PANEL_CLASS);
-    if (panel && !panel.hidden) {
-      closePanel();
+    const panelOpen = panel && !panel.hidden;
+    const wrap = document.querySelector("." + FLOAT_CLASS);
+    const sheetOpen = wrap && wrap.classList.contains("md-to-docx-batch-float-open");
+
+    if (e.key === "Escape") {
+      if (panelOpen) {
+        e.preventDefault();
+        closePanel();
+        return;
+      }
+      if (sheetOpen) {
+        if (wrap.classList.contains("md-to-docx-batch-exporting")) return;
+        e.preventDefault();
+        closeSheet();
+      }
       return;
     }
-    const wrap = document.querySelector("." + FLOAT_CLASS);
-    if (wrap && wrap.classList.contains("md-to-docx-batch-float-open")) {
-      closeSheet();
+
+    if (e.key === "Tab" && global.MdToDocxExport && global.MdToDocxExport.trapFocus) {
+      if (panelOpen) {
+        global.MdToDocxExport.trapFocus(panel, e);
+      } else if (sheetOpen) {
+        const sheet = wrap.querySelector(".md-to-docx-batch-sheet");
+        if (sheet) global.MdToDocxExport.trapFocus(sheet, e);
+      }
     }
   }
 
@@ -588,62 +770,143 @@
       .trim();
   }
 
-  async function runBatchExport(hooks) {
-    const items = Array.from(SELECTED.values());
-    if (!items.length) return;
-    const sections = [];
-    let previousFp = conversationFingerprint(hooks);
-    for (let i = 0; i < items.length; i++) {
-      const item = items[i];
-      global.MdToDocxExport.showToast(
-        "Exporting " + (i + 1) + "/" + items.length + ": " + (item.title || item.id)
-      );
-      try {
-        const beforeFp = conversationFingerprint(hooks);
-        await hooks.openConversation(item);
-        const ready = await waitFor(() => {
-          if (
-            typeof hooks.isConversationReady === "function" &&
-            !hooks.isConversationReady()
-          ) {
-            return false;
-          }
-          const fp = conversationFingerprint(hooks);
-          // Require content or URL change so SPA leftover DOM is not reused.
-          return !!(fp && fp !== beforeFp && fp !== previousFp);
-        }, 5000);
-        if (!ready) {
-          await wait(600);
-        }
-        const data = hooks.extractConversationMarkdown(document);
-        const fp = conversationFingerprint(hooks);
-        if (fp === previousFp) {
-          global.MdToDocxExport.showToast(
-            "Skipped stale chat: " + (item.title || item.id)
-          );
-          continue;
-        }
-        previousFp = fp;
-        const title = (data && data.title) || item.title || item.id;
-        const body = stripLeadingTitle((data && data.markdown) || "");
-        if (body.trim()) {
-          sections.push("## Session: " + title + "\n\n" + body.trim());
-        }
-      } catch (err) {
-        global.MdToDocxExport.showToast(
-          "Failed: " + (item.title || item.id) + " — " + (err.message || err)
-        );
-      }
-    }
+  function setBatchProgress(wrap, current, total, title) {
+    if (!wrap) return;
+    const progress = wrap.querySelector(".md-to-docx-batch-progress");
+    const bar = wrap.querySelector(".md-to-docx-batch-progress-bar");
+    const label = wrap.querySelector(".md-to-docx-batch-progress-label");
+    const hint = wrap.querySelector(".md-to-docx-batch-hint");
+    const selectBtn = wrap.querySelector(".md-to-docx-batch-select");
+    const clearBtn = wrap.querySelector(".md-to-docx-batch-clear");
+    if (!progress || !bar || !label) return;
 
-    if (!sections.length) {
-      global.MdToDocxExport.showToast("No conversation content found for selection");
+    const active = total > 0 && current >= 0;
+    wrap.classList.toggle("md-to-docx-batch-exporting", active);
+    progress.hidden = !active;
+    progress.setAttribute("aria-hidden", active ? "false" : "true");
+    if (hint) hint.hidden = active;
+    if (selectBtn) selectBtn.disabled = active;
+    if (clearBtn) clearBtn.disabled = active;
+
+    if (!active) {
+      bar.style.width = "0%";
+      bar.setAttribute("aria-valuenow", "0");
+      label.textContent = "";
       return;
     }
 
-    const markdown = "# Batch export\n\n" + sections.join("\n\n---\n\n");
-    const title = "batch_export_" + items.length + "_sessions";
-    await global.MdToDocxExport.convertAndDownload(markdown, title);
+    const pct = Math.max(0, Math.min(100, Math.round((current / total) * 100)));
+    bar.style.width = pct + "%";
+    bar.setAttribute("aria-valuenow", String(pct));
+    const name = title ? String(title) : "";
+    label.textContent =
+      current >= total
+        ? t("batchFinishing")
+        : t("batchProgress", {
+            current: current + 1,
+            total: total,
+            name: name ? ": " + name : "",
+          });
+  }
+
+  async function runBatchExport(hooks) {
+    const items = Array.from(SELECTED.values());
+    if (!items.length) return;
+    const wrap = document.querySelector("." + FLOAT_CLASS);
+    const exportBtn = wrap && wrap.querySelector(".md-to-docx-batch-export");
+    if (exportBtn) {
+      exportBtn.disabled = true;
+      exportBtn.setAttribute("aria-busy", "true");
+      exportBtn.classList.add("md-to-docx-export-btn--busy");
+      if (!exportBtn.dataset.mdIdleLabel) {
+        exportBtn.dataset.mdIdleLabel = exportBtn.textContent || "";
+      }
+      // Batch export CTA is plain text (no badge/label child).
+      exportBtn.textContent = t("batchExporting");
+    }
+    setBatchProgress(wrap, 0, items.length, items[0] && items[0].title);
+    try {
+      const sections = [];
+      let previousFp = conversationFingerprint(hooks);
+      for (let i = 0; i < items.length; i++) {
+        const item = items[i];
+        setBatchProgress(wrap, i, items.length, item.title || item.id);
+        global.MdToDocxExport.showToast(
+          t("batchProgress", {
+            current: i + 1,
+            total: items.length,
+            name: ": " + (item.title || item.id),
+          }),
+          wrap,
+          "info"
+        );
+        try {
+          const beforeFp = conversationFingerprint(hooks);
+          await hooks.openConversation(item);
+          const ready = await waitFor(() => {
+            if (
+              typeof hooks.isConversationReady === "function" &&
+              !hooks.isConversationReady()
+            ) {
+              return false;
+            }
+            const fp = conversationFingerprint(hooks);
+            // Require content or URL change so SPA leftover DOM is not reused.
+            return !!(fp && fp !== beforeFp && fp !== previousFp);
+          }, 5000);
+          if (!ready) {
+            await wait(600);
+          }
+          const data = hooks.extractConversationMarkdown(document);
+          const fp = conversationFingerprint(hooks);
+          if (fp === previousFp) {
+            global.MdToDocxExport.showToast(
+              t("batchSkipped", { title: item.title || item.id }),
+              wrap,
+              "info"
+            );
+            continue;
+          }
+          previousFp = fp;
+          const title = (data && data.title) || item.title || item.id;
+          const body = stripLeadingTitle((data && data.markdown) || "");
+          if (body.trim()) {
+            sections.push("## Session: " + title + "\n\n" + body.trim());
+          }
+        } catch (err) {
+          global.MdToDocxExport.showToast(
+            t("batchFailed", {
+              title: item.title || item.id,
+              error: err.message || err,
+            }),
+            wrap,
+            "err"
+          );
+        }
+      }
+
+      if (!sections.length) {
+        global.MdToDocxExport.showToast(t("batchNoContent"), wrap, "err");
+        return;
+      }
+
+      setBatchProgress(wrap, items.length, items.length, "");
+      const markdown = "# Batch export\n\n" + sections.join("\n\n---\n\n");
+      const title = "batch_export_" + items.length + "_sessions";
+      await global.MdToDocxExport.convertAndDownload(markdown, title);
+    } finally {
+      setBatchProgress(wrap, -1, 0, "");
+      if (exportBtn) {
+        exportBtn.classList.remove("md-to-docx-export-btn--busy");
+        exportBtn.setAttribute("aria-busy", "false");
+        if (exportBtn.dataset.mdIdleLabel) {
+          exportBtn.textContent = exportBtn.dataset.mdIdleLabel;
+          delete exportBtn.dataset.mdIdleLabel;
+        }
+        updateBar(wrap);
+      }
+      if (wrap) setFloatOpen(wrap, false);
+    }
   }
 
   /**
@@ -662,6 +925,12 @@
     ensurePanel(hooks);
     updateBar(bar);
     document.addEventListener("keydown", onDocKeyDown, true);
+
+    if (global.MdToDocxI18n && typeof global.MdToDocxI18n.onLocaleChange === "function") {
+      global.MdToDocxI18n.onLocaleChange(() => {
+        updateBar(bar);
+      });
+    }
 
     function sync() {
       updateBar(bar);
