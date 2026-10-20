@@ -5,7 +5,7 @@ from __future__ import annotations
 import asyncio
 import sys
 from collections.abc import Callable
-from typing import Any, TypedDict
+from typing import Any, TypedDict, cast
 
 from md_to_docx import __version__
 from md_to_docx.mcp.handlers import (
@@ -140,8 +140,9 @@ async def _run_server() -> None:
     from mcp.types import TextContent, Tool
 
     server = Server("md-to-docx")
+    mcp_server = cast(Any, server)
 
-    @server.list_tools()  # type: ignore[attr-defined]
+    @mcp_server.list_tools()
     async def list_tools() -> list[Tool]:
         return [
             Tool(
@@ -152,7 +153,7 @@ async def _run_server() -> None:
             for schema in TOOL_SCHEMAS
         ]
 
-    @server.call_tool()  # type: ignore[attr-defined]
+    @mcp_server.call_tool()
     async def call_tool(name: str, arguments: dict[str, Any]) -> list[TextContent]:
         handler = TOOL_HANDLERS.get(name)
         if handler is None:
