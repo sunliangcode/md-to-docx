@@ -233,9 +233,7 @@ class DocxParser:
             return None
         return _outline_lvl_to_heading(outline_el.get(_w("val")))
 
-    def _heading_level_for_paragraph(
-        self, p: etree._Element, style: str | None
-    ) -> int | None:
+    def _heading_level_for_paragraph(self, p: etree._Element, style: str | None) -> int | None:
         level = None
         if style:
             level = HEADING_STYLES.get(style) or self._style_heading_levels.get(style)
@@ -338,7 +336,6 @@ class DocxParser:
 
         ppr = p.find("w:pPr", NS)
         if ppr is not None and ppr.find("w:numPr", NS) is not None:
-            ilvl_el = ppr.find("w:numPr/w:ilvl", NS)
             numid_el = ppr.find("w:numPr/w:numId", NS)
             ordered = True
             if numid_el is not None:

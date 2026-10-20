@@ -18,6 +18,8 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+          cache: pip
+          cache-dependency-path: pyproject.toml
 
       - name: Build template assets
         run: |
@@ -28,7 +30,7 @@ jobs:
         run: pip install -e ".[dev,mcp,web]" build
 
       - name: Run tests
-        run: pytest tests/ -v
+        run: pytest tests/ -v --cov=md_to_docx --cov-fail-under=83
 
       - name: Build package
         run: python -m build

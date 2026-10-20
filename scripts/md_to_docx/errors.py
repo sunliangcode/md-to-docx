@@ -31,12 +31,7 @@ class MdToDocxError(Exception):
         }
 
     def __str__(self) -> str:
-        return (
-            f"problem: {self.problem}\n"
-            f"cause: {self.cause}\n"
-            f"fix: {self.fix}\n"
-            f"docs: {self.docs}"
-        )
+        return f"problem: {self.problem}\ncause: {self.cause}\nfix: {self.fix}\ndocs: {self.docs}"
 
 
 def unknown_preset(name: str) -> MdToDocxError:

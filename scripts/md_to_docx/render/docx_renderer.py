@@ -6,7 +6,7 @@ import sys
 from pathlib import Path
 
 from docx import Document
-from docx.enum.text import WD_ALIGN_PARAGRAPH, WD_BREAK
+from docx.enum.text import WD_BREAK
 from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
 from docx.shared import Inches, Pt, RGBColor
@@ -121,8 +121,10 @@ class DocxRenderer:
         from md_to_docx.render.footnotes import ensure_footnotes_part
 
         meta = document.metadata
-        if meta.title and document.blocks and not (
-            isinstance(document.blocks[0], n.Heading) and document.blocks[0].level == 1
+        if (
+            meta.title
+            and document.blocks
+            and not (isinstance(document.blocks[0], n.Heading) and document.blocks[0].level == 1)
         ):
             self.doc.add_heading(meta.title, level=1)
 
@@ -252,9 +254,7 @@ class DocxRenderer:
 
                 add_inline_math(paragraph, child.latex)
             elif isinstance(child, n.CrossRef):
-                label, num = self.xref_map.get(
-                    f"{child.kind}:{child.identifier}", ("?", 0)
-                )
+                label, num = self.xref_map.get(f"{child.kind}:{child.identifier}", ("?", 0))
                 text = f"{label} {num}"
                 _add_hyperlink(paragraph, text, f"#{child.kind}-{child.identifier}")
             elif isinstance(child, n.FootnoteRef):
@@ -297,7 +297,11 @@ class DocxRenderer:
         if block.caption:
             num = 0
             if block.identifier:
-                key = block.identifier if block.identifier.startswith("tbl:") else f"tbl:{block.identifier}"
+                key = (
+                    block.identifier
+                    if block.identifier.startswith("tbl:")
+                    else f"tbl:{block.identifier}"
+                )
                 _label, num = self.xref_map.get(key, (self.table_label, 0))
             cap = self.doc.add_paragraph(style="Caption")
             if num:
@@ -318,7 +322,7 @@ class DocxRenderer:
 
     def _render_code(self, block: n.CodeBlock) -> None:
         for line in block.text.splitlines() or [""]:
-            p = self.doc.add_paragraph(line, style="MDCodeBlock")
+            self.doc.add_paragraph(line, style="MDCodeBlock")
 
     def _render_mermaid(self, block: n.Mermaid) -> None:
         from md_to_docx.render.image import embed_image_path

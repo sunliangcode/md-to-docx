@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Literal, Union
+from typing import Literal
 
 Alignment = Literal["left", "center", "right", "default"]
 
@@ -60,12 +60,6 @@ class SoftBreak:
 @dataclass(frozen=True, slots=True)
 class MathInline:
     latex: str
-
-
-Inline = Union[
-    Text, Strong, Emphasis, Strike, Code, Link, InlineImage, Break, SoftBreak, MathInline,
-    "CrossRef", "FootnoteRef",
-]
 
 
 @dataclass(frozen=True, slots=True)
@@ -194,11 +188,39 @@ class FootnoteDef:
     children: tuple[Block, ...]
 
 
-Block = Union[
-    Heading, Paragraph, ListBlock, Table, CodeBlock, BlockQuote,
-    ThematicBreak, Image, Callout, PageBreak, HTMLBlock, Mermaid, MathBlock,
-    Figure, TableOfContents,
-]
+# Defined after all node classes so runtime `|` unions resolve without forward refs.
+Inline = (
+    Text
+    | Strong
+    | Emphasis
+    | Strike
+    | Code
+    | Link
+    | InlineImage
+    | Break
+    | SoftBreak
+    | MathInline
+    | CrossRef
+    | FootnoteRef
+)
+
+Block = (
+    Heading
+    | Paragraph
+    | ListBlock
+    | Table
+    | CodeBlock
+    | BlockQuote
+    | ThematicBreak
+    | Image
+    | Callout
+    | PageBreak
+    | HTMLBlock
+    | Mermaid
+    | MathBlock
+    | Figure
+    | TableOfContents
+)
 
 
 @dataclass(frozen=True, slots=True)

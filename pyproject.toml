@@ -21,6 +21,7 @@ classifiers = [
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Topic :: Text Processing :: Markup",
+    "Typing :: Typed",
 ]
 dependencies = [
     "markdown-it-py>=3.0",
@@ -33,10 +34,20 @@ dependencies = [
 [project.urls]
 Homepage = "https://github.com/sunliang11/md-to-docx"
 Documentation = "https://github.com/sunliang11/md-to-docx#readme"
+Repository = "https://github.com/sunliang11/md-to-docx"
 Issues = "https://github.com/sunliang11/md-to-docx/issues"
+Changelog = "https://github.com/sunliang11/md-to-docx/blob/main/CHANGELOG.md"
 
 [project.optional-dependencies]
-dev = ["pytest>=7.0", "pillow>=10.0"]
+dev = [
+    "pytest>=7.0",
+    "pytest-cov>=5.0",
+    "pillow>=12.3.0",
+    "ruff>=0.6",
+    "pre-commit>=4.0",
+    "mypy>=1.11",
+    "pip-audit>=2.7",
+]
 mcp = ["mcp>=1.0"]
 web = ["fastapi>=0.100", "uvicorn[standard]>=0.23", "httpx>=0.24"]
 
@@ -50,6 +61,7 @@ dev-mode-dirs = ["scripts"]
 packages = ["scripts/md_to_docx"]
 
 [tool.hatch.build.targets.wheel.force-include]
+"scripts/md_to_docx/py.typed" = "md_to_docx/py.typed"
 "assets/reference-native.docx" = "md_to_docx/data/reference-native.docx"
 "assets/presets/professional.docx" = "md_to_docx/data/presets/professional.docx"
 "assets/presets/editorial.docx" = "md_to_docx/data/presets/editorial.docx"
@@ -65,8 +77,15 @@ include = [
     "/assets",
     "/references",
     "/README.md",
+    "/README.zh.md",
     "/SKILL.md",
     "/LICENSE",
+    "/CHANGELOG.md",
+    "/CONTRIBUTING.md",
+    "/CODE_OF_CONDUCT.md",
+    "/SECURITY.md",
+    "/SUPPORT.md",
+    "/pyproject.toml",
 ]
 
 [tool.pytest.ini_options]
@@ -75,3 +94,69 @@ pythonpath = ["."]
 markers = [
     "mermaid: needs mmdc on PATH",
 ]
+
+[tool.coverage.run]
+branch = true
+source = ["md_to_docx"]
+omit = [
+    "*/md_to_docx/__main__.py",
+    "*/md_to_docx/mcp/__main__.py",
+    "*/md_to_docx/presets_build.py",
+    "*/md_to_docx/reference_native.py",
+]
+
+[tool.coverage.report]
+show_missing = true
+skip_covered = true
+# Branch coverage baseline (2026-10): ~84% after OMML/styles tests.
+fail_under = 83
+exclude_lines = [
+    "pragma: no cover",
+    "if TYPE_CHECKING:",
+    "raise NotImplementedError",
+]
+
+[tool.mypy]
+python_version = "3.10"
+mypy_path = "scripts"
+ignore_missing_imports = true
+warn_unused_ignores = true
+show_error_codes = true
+pretty = true
+# Progressive: expand `files` as more modules are typed.
+files = [
+    "scripts/md_to_docx/api.py",
+    "scripts/md_to_docx/errors.py",
+    "scripts/md_to_docx/ast/nodes.py",
+    "scripts/md_to_docx/preset.py",
+    "scripts/md_to_docx/paths.py",
+    "scripts/md_to_docx/validate.py",
+    "scripts/md_to_docx/load.py",
+    "scripts/md_to_docx/plugin/base.py",
+    "scripts/md_to_docx/diff/ast_diff.py",
+    "scripts/md_to_docx/write/markdown.py",
+]
+
+[tool.ruff]
+target-version = "py310"
+line-length = 100
+src = ["scripts", "tests"]
+
+[tool.ruff.lint]
+select = [
+    "E",   # pycodestyle errors
+    "W",   # pycodestyle warnings
+    "F",   # pyflakes
+    "I",   # isort
+    "UP",  # pyupgrade
+]
+ignore = [
+    "E501",  # line length handled by formatter / reviews
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["E402"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"

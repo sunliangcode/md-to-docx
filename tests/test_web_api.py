@@ -11,7 +11,6 @@ import pytest
 pytest.importorskip("fastapi")
 
 from fastapi.testclient import TestClient
-
 from web.app import MAX_BODY_BYTES, MAX_UPLOAD_BYTES, app
 
 REPO = Path(__file__).resolve().parent.parent

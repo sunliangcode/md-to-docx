@@ -8,7 +8,6 @@ from md_to_docx.ast import nodes as n
 from md_to_docx.diff.ast_diff import diff_documents
 from md_to_docx.engine.native import NativeOptions, convert_native
 from md_to_docx.load import load_document
-from md_to_docx.parse.markdown import parse_markdown
 from md_to_docx.paths import native_reference_doc
 from md_to_docx.reverse import reverse_docx
 

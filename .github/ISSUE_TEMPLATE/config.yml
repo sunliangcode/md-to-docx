@@ -2,4 +2,10 @@ blank_issues_enabled: false
 contact_links:
   - name: Documentation
     url: https://github.com/sunliang11/md-to-docx/blob/main/references/installation.md
-    about: Install, mermaid, and conversion troubleshooting
+    about: Install, Mermaid, and conversion troubleshooting
+  - name: Support
+    url: https://github.com/sunliang11/md-to-docx/blob/main/SUPPORT.md
+    about: Where to ask for help and what to include in reports
+  - name: Security vulnerability
+    url: https://github.com/sunliang11/md-to-docx/security/advisories/new
+    about: Private vulnerability disclosure (do not file a public issue)

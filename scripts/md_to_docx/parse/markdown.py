@@ -97,9 +97,7 @@ def _inline_children(tokens: list[Token], start: int, end: int) -> tuple[n.Inlin
             close = _find_close(tokens, i, "link_close")
             href = tok.attrGet("href") or ""
             title = tok.attrGet("title")
-            children.append(
-                n.Link(href, _inline_children(tokens, i + 1, close), title=title)
-            )
+            children.append(n.Link(href, _inline_children(tokens, i + 1, close), title=title))
             i = close + 1
         elif tok.type == "image":
             alt = (tok.attrGet("alt") or tok.content or "").strip()
@@ -145,7 +143,9 @@ def _find_close(tokens: list[Token], start: int, close_type: str) -> int:
     return len(tokens) - 1
 
 
-def _parse_image_attrs(src: str, alt: str, title: str | None) -> tuple[str, str, str | None, str | None]:
+def _parse_image_attrs(
+    src: str, alt: str, title: str | None
+) -> tuple[str, str, str | None, str | None]:
     identifier = None
     m = FIG_ID_RE.search(alt)
     if m:
@@ -172,7 +172,9 @@ def _blocks_from_tokens(
         tok = tokens[i]
         if tok.type in ("bullet_list_open", "ordered_list_open"):
             ordered = tok.type == "ordered_list_open"
-            close = _find_close(tokens, i, "bullet_list_close" if not ordered else "ordered_list_close")
+            close = _find_close(
+                tokens, i, "bullet_list_close" if not ordered else "ordered_list_close"
+            )
             items = _parse_list_items(tokens, i + 1, close, ordered, callout_map)
             blocks.append(
                 n.ListBlock(
@@ -303,9 +305,7 @@ def _parse_table(tokens: list[Token], start: int, end: int) -> n.Table:
                     children = (n.Paragraph(_inline_children([inline], 0, 1)),)
                 else:
                     children = ()
-                cells.append(
-                    n.TableCell(children=children, align=alignment, header=is_header)
-                )
+                cells.append(n.TableCell(children=children, align=alignment, header=is_header))
                 j = cell_close + 1
             else:
                 j += 1
@@ -455,11 +455,7 @@ def _split_block_images(blocks: tuple[n.Block, ...]) -> tuple[n.Block, ...]:
                 # Table caption as its own softbreak segment immediately before a table
                 is_last = seg_i == len(segments) - 1
                 cap = _table_caption_from_segment(segment) if is_last else None
-                if (
-                    cap is not None
-                    and i + 1 < len(blocks)
-                    and isinstance(blocks[i + 1], n.Table)
-                ):
+                if cap is not None and i + 1 < len(blocks) and isinstance(blocks[i + 1], n.Table):
                     flush_pending()
                     caption, tbl_id = cap
                     table = blocks[i + 1]

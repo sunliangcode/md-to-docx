@@ -7,7 +7,7 @@ from pathlib import Path
 
 from docx import Document
 from docx.enum.text import WD_ALIGN_PARAGRAPH
-from docx.shared import Mm, Pt
+from docx.shared import Mm
 
 from md_to_docx.paths import data_dir
 from md_to_docx.render.fields import add_page_field

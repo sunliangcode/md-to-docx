@@ -50,9 +50,7 @@ def is_excluded(
     rel = md_path.relative_to(base_dir)
     rel_posix = rel.as_posix()
     name = md_path.name
-    return any(
-        _matches_exclude_pattern(rel_posix, name, pattern) for pattern in patterns
-    )
+    return any(_matches_exclude_pattern(rel_posix, name, pattern) for pattern in patterns)
 
 
 def _should_skip_path(md_path: Path, base_dir: Path) -> bool:
@@ -189,11 +187,7 @@ def _normalize_layout(text: str) -> str:
                 needs_blank_before = True
             if IMAGE_RE.match(stripped) and prev != "":
                 needs_blank_before = True
-            if (
-                table_ranges
-                and any(i == start for start, _ in table_ranges)
-                and prev != ""
-            ):
+            if table_ranges and any(i == start for start, _ in table_ranges) and prev != "":
                 needs_blank_before = True
             if FENCED_CODE_RE.match(stripped) and prev != "":
                 needs_blank_before = True

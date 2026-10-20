@@ -261,9 +261,7 @@ def _run_convert(args: argparse.Namespace) -> int:
 
 def _run_reverse(args: argparse.Namespace) -> int:
     docx_path = args.input.resolve()
-    out_path = (
-        args.output if args.output is not None else docx_path.with_suffix(".md")
-    ).resolve()
+    out_path = (args.output if args.output is not None else docx_path.with_suffix(".md")).resolve()
     if not docx_path.is_file():
         print(f"error: file not found: {docx_path}", file=sys.stderr)
         return 2

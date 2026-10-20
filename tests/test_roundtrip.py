@@ -42,6 +42,6 @@ def test_roundtrip_preserves_bold(roundtrip_paths: tuple[Path, Path]) -> None:
     _original, back = roundtrip_paths
     doc = parse_markdown(back.read_text(encoding="utf-8"))
     paras = [b for b in doc.blocks if isinstance(b, n.Paragraph)]
-    assert any(
-        isinstance(c, n.Strong) for p in paras for c in p.children
-    ), "roundtrip lost bold formatting"
+    assert any(isinstance(c, n.Strong) for p in paras for c in p.children), (
+        "roundtrip lost bold formatting"
+    )

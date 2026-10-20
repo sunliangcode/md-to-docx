@@ -4,11 +4,50 @@ updates:
     directory: "/"
     schedule:
       interval: weekly
+    open-pull-requests-limit: 5
+    labels:
+      - dependencies
+    groups:
+      python-dev:
+        patterns:
+          - "pytest*"
+          - "ruff"
+          - "mypy"
+          - "pre-commit"
+          - "pip-audit"
+          - "pillow"
+      python-runtime:
+        patterns:
+          - "markdown-it-py"
+          - "mdit-py-plugins"
+          - "python-docx"
+          - "latex2mathml"
+          - "lxml"
+          - "mcp"
+          - "fastapi"
+          - "uvicorn*"
+          - "httpx"
+
   - package-ecosystem: github-actions
     directory: "/"
     schedule:
       interval: weekly
+    open-pull-requests-limit: 5
+    labels:
+      - dependencies
+    groups:
+      github-actions:
+        patterns:
+          - "*"
+
   - package-ecosystem: npm
     directory: "/browser-extension"
     schedule:
       interval: weekly
+    open-pull-requests-limit: 5
+    labels:
+      - dependencies
+    groups:
+      browser-extension:
+        patterns:
+          - "*"

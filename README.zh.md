@@ -3,6 +3,8 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![CI](https://github.com/sunliang11/md-to-docx/actions/workflows/ci.yml/badge.svg)](https://github.com/sunliang11/md-to-docx/actions/workflows/ci.yml)
 ![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue)
+[![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
+![Coverage](https://img.shields.io/badge/coverage-83%25%2B-brightgreen)
 
 # md-to-docx
 
@@ -272,6 +274,10 @@ md-to-docx report.md         # 或 ./bin/convert report.md（免 pip）
 - [示例库](examples/README.md)
 - [插件示例](examples/plugins/)
 - [环境变量](references/configuration.md)
+- [贡献指南](CONTRIBUTING.md)
+- [支持与求助](SUPPORT.md)
+- [行为准则](CODE_OF_CONDUCT.md)
+- [安全策略](SECURITY.md)
 - [开发与测试](references/development.md)
 - [发布流程](references/release.md)
 - [路线图](references/roadmap.md)

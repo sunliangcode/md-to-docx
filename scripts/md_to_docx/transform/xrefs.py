@@ -20,7 +20,9 @@ def resolve_xrefs(document: n.Document, xref_map: dict[str, tuple[str, int]]) ->
         if isinstance(block, n.Paragraph):
             return n.Paragraph(tuple(resolve_inline(c) for c in block.children))
         if isinstance(block, n.Heading):
-            return n.Heading(block.level, tuple(resolve_inline(c) for c in block.children), block.anchor)
+            return n.Heading(
+                block.level, tuple(resolve_inline(c) for c in block.children), block.anchor
+            )
         return block
 
     return n.Document(

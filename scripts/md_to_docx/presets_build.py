@@ -2,13 +2,10 @@
 
 from __future__ import annotations
 
-import sys
 from pathlib import Path
 
 from docx import Document
 from docx.enum.text import WD_ALIGN_PARAGRAPH
-from docx.oxml import OxmlElement
-from docx.oxml.ns import qn
 from docx.shared import Mm, Pt, RGBColor
 
 from md_to_docx.paths import assets_dir
@@ -90,9 +87,17 @@ def build_preset(name: str, spec: dict, out_dir: Path) -> Path:
 
     set_theme_font_lang(doc)
     if spec.get("header"):
-        hp = section.header.paragraphs[0] if section.header.paragraphs else section.header.add_paragraph()
+        hp = (
+            section.header.paragraphs[0]
+            if section.header.paragraphs
+            else section.header.add_paragraph()
+        )
         hp.text = spec["header"]
-    fp = section.footer.paragraphs[0] if section.footer.paragraphs else section.footer.add_paragraph()
+    fp = (
+        section.footer.paragraphs[0]
+        if section.footer.paragraphs
+        else section.footer.add_paragraph()
+    )
     fp.alignment = WD_ALIGN_PARAGRAPH.CENTER
     add_page_field(fp)
 

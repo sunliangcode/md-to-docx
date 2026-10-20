@@ -31,11 +31,7 @@ def test_frozen_raises():
 
 
 def test_visitor_collects_text():
-    doc = n.Document(
-        blocks=(
-            n.Paragraph((n.Text("hello "), n.Strong((n.Text("world"),)))),
-        )
-    )
+    doc = n.Document(blocks=(n.Paragraph((n.Text("hello "), n.Strong((n.Text("world"),)))),))
     collector = TextCollector()
     for block in doc.blocks:
         collector.visit(block)

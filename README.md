@@ -3,6 +3,8 @@ English | [中文](README.zh.md)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![CI](https://github.com/sunliang11/md-to-docx/actions/workflows/ci.yml/badge.svg)](https://github.com/sunliang11/md-to-docx/actions/workflows/ci.yml)
 ![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue)
+[![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
+![Coverage](https://img.shields.io/badge/coverage-83%25%2B-brightgreen)
 
 # md-to-docx
 
@@ -273,6 +275,9 @@ Install options and entry points: [CLI Reference — How to run commands](refere
 - [Example plugins](examples/plugins/)
 - [Environment variables](references/configuration.md)
 - [Contributing](CONTRIBUTING.md)
+- [Support](SUPPORT.md)
+- [Code of Conduct](CODE_OF_CONDUCT.md)
+- [Security](SECURITY.md)
 - [Development & tests](references/development.md)
 - [Release process](references/release.md)
 - [Roadmap](references/roadmap.md)

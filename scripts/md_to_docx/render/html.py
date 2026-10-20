@@ -43,11 +43,15 @@ def _inline_html(children: tuple[n.Inline, ...]) -> str:
         elif isinstance(child, n.SoftBreak):
             parts.append(" ")
         elif isinstance(child, n.MathInline):
-            parts.append(f"<span class=\"math\">${html.escape(child.latex)}$</span>")
+            parts.append(f'<span class="math">${html.escape(child.latex)}$</span>')
         elif isinstance(child, n.FootnoteRef):
-            parts.append(f'<sup><a href="#fn-{html.escape(child.key)}">[{html.escape(child.key)}]</a></sup>')
+            parts.append(
+                f'<sup><a href="#fn-{html.escape(child.key)}">[{html.escape(child.key)}]</a></sup>'
+            )
         elif isinstance(child, n.CrossRef):
-            parts.append(f'<a href="#{child.kind}-{html.escape(child.identifier)}">[@{child.kind}:{child.identifier}]</a>')
+            parts.append(
+                f'<a href="#{child.kind}-{html.escape(child.identifier)}">[@{child.kind}:{child.identifier}]</a>'
+            )
     return "".join(parts)
 
 
@@ -75,9 +79,8 @@ def _block_html(block: n.Block, lines: list[str]) -> None:
         lines.append(f"</{tag}>")
     elif isinstance(block, n.Table):
         lines.append("<table>")
-        for ri, row in enumerate(block.rows):
+        for row in block.rows:
             lines.append("<tr>")
-            cell_tag = "th" if ri == 0 and all(c.header for c in row) else "td"
             for cell in row:
                 tag = "th" if cell.header else "td"
                 cell_text = " ".join(
@@ -88,7 +91,7 @@ def _block_html(block: n.Block, lines: list[str]) -> None:
             lines.append("</tr>")
         lines.append("</table>")
         if block.caption:
-            lines.append(f"<p class=\"caption\">{html.escape(block.caption)}</p>")
+            lines.append(f'<p class="caption">{html.escape(block.caption)}</p>')
     elif isinstance(block, n.CodeBlock):
         lang = html.escape(block.lang or "")
         code = html.escape(block.text)
@@ -125,7 +128,7 @@ def _block_html(block: n.Block, lines: list[str]) -> None:
     elif isinstance(block, n.PageBreak):
         lines.append('<hr class="pagebreak">')
     elif isinstance(block, n.TableOfContents):
-        lines.append(f"<nav class=\"toc\"><h2>{html.escape(block.title)}</h2></nav>")
+        lines.append(f'<nav class="toc"><h2>{html.escape(block.title)}</h2></nav>')
     elif isinstance(block, n.HTMLBlock):
         lines.append(f"<!-- raw: {html.escape(block.raw)} -->")
 
@@ -139,9 +142,9 @@ def render_html(document: n.Document, *, title: str | None = None) -> str:
     body = "\n".join(body_lines)
     return (
         "<!DOCTYPE html>\n"
-        "<html lang=\"en\">\n"
+        '<html lang="en">\n'
         "<head>\n"
-        f"  <meta charset=\"utf-8\">\n"
+        f'  <meta charset="utf-8">\n'
         f"  <title>{html.escape(page_title)}</title>\n"
         f"  <style>{CALLOUT_CSS}</style>\n"
         "</head>\n"

@@ -19,26 +19,25 @@ class Preset:
 
 
 PRESETS: dict[str, Preset] = {
-    "professional": Preset(
-        "professional", "professional", toc=True, numbering=False
-    ),
+    "professional": Preset("professional", "professional", toc=True, numbering=False),
     "editorial": Preset(
-        "editorial", "editorial", toc=True, numbering=False,
+        "editorial",
+        "editorial",
+        toc=True,
+        numbering=False,
         toc_title="Table of Contents",
     ),
-    "technical": Preset(
-        "technical", "technical", toc=True, numbering=True
-    ),
+    "technical": Preset("technical", "technical", toc=True, numbering=True),
     "academic": Preset(
-        "academic", "academic", toc=True, numbering=True,
-        figure_label="Figure", toc_title="Contents",
+        "academic",
+        "academic",
+        toc=True,
+        numbering=True,
+        figure_label="Figure",
+        toc_title="Contents",
     ),
-    "business": Preset(
-        "business", "business", toc=False, numbering=False
-    ),
-    "report": Preset(
-        "report", "report", toc=True, numbering=False
-    ),
+    "business": Preset("business", "business", toc=False, numbering=False),
+    "report": Preset("report", "report", toc=True, numbering=False),
 }
 
 

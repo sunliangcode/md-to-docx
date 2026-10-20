@@ -64,9 +64,7 @@ def validate_document(doc: n.Document, *, base_dir: Path) -> list[Issue]:
                 defined_fig.add(block.identifier.replace("fig:", ""))
             path = base_dir / block.src if not Path(block.src).is_absolute() else Path(block.src)
             if not path.is_file():
-                issues.append(
-                    Issue("error", "missing_image", f"missing image: {block.src}")
-                )
+                issues.append(Issue("error", "missing_image", f"missing image: {block.src}"))
         elif isinstance(block, n.Mermaid):
             if not shutil.which("mmdc"):
                 issues.append(
@@ -99,9 +97,7 @@ def validate_file(md_path: Path, *, strict: bool = False) -> list[Issue]:
     issues = validate_document(doc, base_dir=md_path.parent)
     if strict:
         issues = [
-            Issue("error", i.code, i.message, i.line)
-            if i.severity == "warning"
-            else i
+            Issue("error", i.code, i.message, i.line) if i.severity == "warning" else i
             for i in issues
         ]
     return issues

@@ -71,9 +71,7 @@ def _write_block(block: n.Block, lines: list[str]) -> None:
                 cells: list[str] = []
                 for cell in row:
                     cell_text = " ".join(
-                        _write_inlines(b.children)
-                        if isinstance(b, n.Paragraph)
-                        else ""
+                        _write_inlines(b.children) if isinstance(b, n.Paragraph) else ""
                         for b in cell.children
                     ).strip()
                     cells.append(cell_text.replace("|", "\\|"))
@@ -129,9 +127,7 @@ def _write_block(block: n.Block, lines: list[str]) -> None:
     elif isinstance(block, n.Figure):
         if isinstance(block.image, n.Image):
             alt = block.caption or block.image.alt
-            lines.append(
-                f"![{alt}]({block.image.src}) {{#fig:{block.identifier}}}"
-            )
+            lines.append(f"![{alt}]({block.image.src}) {{#fig:{block.identifier}}}")
         elif isinstance(block.image, n.Mermaid):
             lines.append("```mermaid")
             lines.append(block.image.source.rstrip("\n"))

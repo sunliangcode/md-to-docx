@@ -39,6 +39,8 @@ Pin to `@v1.1.1` for this release, or `@v1` for the floating major tag (tracks t
 | `input` | yes | — | Markdown file or directory |
 | `preset` | no | `technical` | Template preset (`professional`, `editorial`, `technical`, `academic`, `business`, `report`) |
 | `output-dir` | no | `dist/docx` | Output directory |
+| `toc` | no | _(preset default)_ | `true` / `false` to force TOC on or off |
+| `numbering` | no | _(preset default)_ | `true` to enable heading numbering |
 
 ## Local testing
 

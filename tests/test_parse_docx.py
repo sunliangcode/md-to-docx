@@ -161,3 +161,55 @@ def test_parse_docx_based_on_builtin_heading(
     assert headings[0].level == 1
     assert _inline_text(headings[0].children) == "Chapter One"
     assert "unhandled paragraph style" not in capsys.readouterr().err
+
+
+def test_heading_helpers() -> None:
+    from md_to_docx.parse.docx import (
+        _builtin_heading_level,
+        _heading_level_from_name,
+        _outline_lvl_to_heading,
+    )
+
+    assert _heading_level_from_name(None) is None
+    assert _heading_level_from_name("Heading 3") == 3
+    assert _heading_level_from_name("标题 2") == 2
+    assert _heading_level_from_name("Nope") is None
+    assert _outline_lvl_to_heading(None) is None
+    assert _outline_lvl_to_heading("x") is None
+    assert _outline_lvl_to_heading("0") == 1
+    assert _outline_lvl_to_heading("9") is None
+    assert _builtin_heading_level("Heading1") == 1
+    assert _builtin_heading_level("3") == 3
+    assert _builtin_heading_level("Normal") is None
+
+
+def test_parse_rich_fixture_docx(tmp_path: Path) -> None:
+    md = tmp_path / "rich.md"
+    md.write_text(
+        "# Title\n\n"
+        "Para with **bold**, *em*, `code`, and [link](https://ex.com).\n\n"
+        "1. one\n2. two\n\n"
+        "- bullet\n\n"
+        "| A | B |\n|---|---|\n| 1 | 2 |\n\n"
+        "```py\nprint(1)\n```\n\n"
+        "> quote\n\n"
+        "---\n\n"
+        "Here[^fn].\n\n"
+        "[^fn]: footnote **body**\n",
+        encoding="utf-8",
+    )
+    out = tmp_path / "rich.docx"
+    convert_native(md, out, options=NativeOptions(template_path=native_reference_doc()))
+    doc = parse_docx(out)
+    types = {type(b).__name__ for b in doc.blocks}
+    assert "Heading" in types
+    assert "Paragraph" in types
+    assert "Table" in types or "ListBlock" in types
+    assert "CodeBlock" in types
+    # Footnotes recovered from footnotes.xml when present
+    assert doc.footnotes or any(
+        isinstance(c, n.FootnoteRef)
+        for b in doc.blocks
+        if isinstance(b, n.Paragraph)
+        for c in b.children
+    )

@@ -110,7 +110,8 @@ def render_mermaid_to_files(
             raise RuntimeError(result.stderr or result.stdout or "mmdc failed")
 
         want_svg = out_svg is not None and (
-            png is None or os.environ.get("MD_TO_DOCX_MERMAID_SVG", "").strip() in ("1", "true", "yes")
+            png is None
+            or os.environ.get("MD_TO_DOCX_MERMAID_SVG", "").strip() in ("1", "true", "yes")
         )
         if want_svg and out_svg is not None and out_svg != primary:
             out_svg.parent.mkdir(parents=True, exist_ok=True)

@@ -3,8 +3,8 @@
 from __future__ import annotations
 
 import re
+from collections.abc import Callable
 from re import Match
-from typing import Callable
 
 
 class MarkdownNormalizer:
@@ -274,8 +274,7 @@ class MarkdownNormalizer:
                 result.append(new_line)
                 if new_level != level:
                     self._log_fix(
-                        f"Adjusted heading level: H{level} -> H{new_level}: "
-                        f"'{text[:30]}...'"
+                        f"Adjusted heading level: H{level} -> H{new_level}: '{text[:30]}...'"
                     )
             else:
                 result.append(line)
@@ -293,9 +292,7 @@ class MarkdownNormalizer:
                 text = self._convert_chinese_number_in_heading(text)
                 normalized = "#" * level + " " + text
                 if normalized != line:
-                    self._log_fix(
-                        f"Normalized heading: '{line.strip()}' -> '{normalized}'"
-                    )
+                    self._log_fix(f"Normalized heading: '{line.strip()}' -> '{normalized}'")
                 result.append(normalized)
             else:
                 result.append(line)
@@ -328,9 +325,7 @@ class MarkdownNormalizer:
                 normalized = indent + "- " + text
                 if normalized != line:
                     if not space:
-                        self._log_fix(
-                            f"Added missing space in bullet list: '{line.strip()}'"
-                        )
+                        self._log_fix(f"Added missing space in bullet list: '{line.strip()}'")
                     else:
                         self._log_fix(f"Normalized bullet list: '{line.strip()}'")
                 result.append(normalized)
@@ -345,9 +340,7 @@ class MarkdownNormalizer:
                 normalized = f"{indent}{number}. {text}"
                 if normalized != line:
                     if not space:
-                        self._log_fix(
-                            f"Added missing space in ordered list: '{line.strip()}'"
-                        )
+                        self._log_fix(f"Added missing space in ordered list: '{line.strip()}'")
                     else:
                         self._log_fix(f"Normalized ordered list: '{line.strip()}'")
                 result.append(normalized)
@@ -428,9 +421,7 @@ class MarkdownNormalizer:
                             i += 1
                             continue
 
-                        if self._is_special_line(prev_line) or self._is_special_line(
-                            next_line
-                        ):
+                        if self._is_special_line(prev_line) or self._is_special_line(next_line):
                             result.append("")
                             prev_empty = True
                             empty_count = 1
@@ -469,9 +460,7 @@ class MarkdownNormalizer:
             if is_heading and i > 0:
                 if result and result[-1].strip() != "":
                     result.append("")
-                    self._log_fix(
-                        f"Added empty line before heading: '{line.strip()[:30]}...'"
-                    )
+                    self._log_fix(f"Added empty line before heading: '{line.strip()[:30]}...'")
 
             result.append(line)
 

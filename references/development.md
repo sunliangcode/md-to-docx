@@ -10,13 +10,36 @@ cd md-to-docx
 pip install -e ".[dev,mcp,web]"
 ```
 
+## Lint
+
+```bash
+ruff check scripts/md_to_docx tests
+ruff format scripts/md_to_docx tests
+# optional:
+pre-commit install && pre-commit run --all-files
+```
+
+## Type check
+
+```bash
+mypy   # progressive public surface; see [tool.mypy] in pyproject.toml
+```
+
 ## Run tests
 
 ```bash
 pytest tests/ -v
+pytest tests/ -v --cov=md_to_docx --cov-fail-under=83
 ```
 
-`lxml` is a runtime dependency. Mermaid rendering needs `mmdc` on PATH; CI does not install it (diagrams are optional unless `--strict-mermaid`).
+`lxml` is a runtime dependency. Mermaid rendering needs `mmdc` on PATH; the main CI job does not require it (diagrams are optional unless `--strict-mermaid`).
+
+## Dependency audit
+
+```bash
+pip install -e ".[dev,mcp,web]"
+pip-audit
+```
 
 ## Python API
 
@@ -78,3 +101,19 @@ Optional Mermaid blocks are rendered to PNG via `mmdc` when available (native me
 2. Add or update tests in `tests/`
 3. Run `pytest tests/ -v`
 4. Update `CHANGELOG.md` for user-visible changes
+
+## OSS / engineering baseline
+
+This repo targets a maintainable, contributable, publishable open-source baseline:
+
+| Area | Evidence |
+|------|----------|
+| Community health | `LICENSE`, `README` (+zh), `CONTRIBUTING`, `CODE_OF_CONDUCT`, `SECURITY`, `SUPPORT`, `CHANGELOG` |
+| Contribution UX | Issue/PR templates, `blank_issues_enabled: false`, contact links |
+| Quality gates | CI: Ruff lint/format, progressive mypy, pytest + ≥83% branch coverage, `pip-audit` |
+| Local DX | `.editorconfig`, `.pre-commit-config.yaml`, `pip install -e ".[dev,…]"` |
+| Supply chain | Dependabot (pip / Actions / npm groups), clean-venv audit job |
+| Packaging | Hatch/`pyproject.toml`, `py.typed`, sdist ships community docs, `release.yml` |
+| Ops hygiene | CI `permissions: contents: read`, concurrency cancel, pip/npm caches |
+
+Release steps: [release.md](release.md).

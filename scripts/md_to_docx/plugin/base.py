@@ -26,11 +26,9 @@ class Plugin(Protocol):
         self,
         document: n.Document,
         ctx: PluginContext,
-    ) -> tuple[n.Document, dict[str, Path]]:
-        ...
+    ) -> tuple[n.Document, dict[str, Path]]: ...
 
-    def transform(self, document: n.Document, ctx: PluginContext) -> n.Document:
-        ...
+    def transform(self, document: n.Document, ctx: PluginContext) -> n.Document: ...
 
 
 class PluginBase:

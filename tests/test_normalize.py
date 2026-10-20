@@ -42,9 +42,7 @@ def test_content_normalize_adds_table_separator():
 def test_content_normalize_aligns_table_columns():
     text = "| A | B | C |\n|---|---|\n| 1 | 2 |\n| a | b | c | d |\n"
     result = normalize_markdown_content(text)
-    data_rows = [
-        ln for ln in result.split("\n") if ln.startswith("|") and "---" not in ln
-    ]
+    data_rows = [ln for ln in result.split("\n") if ln.startswith("|") and "---" not in ln]
     col_counts = [ln.count("|") - 1 for ln in data_rows]
     assert len(set(col_counts)) == 1
 

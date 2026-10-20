@@ -9,10 +9,8 @@ import pytest
 
 from md_to_docx.ast import nodes as n
 from md_to_docx.engine.native import NativeOptions, convert_native
-from md_to_docx.parse.markdown import parse_markdown
 from md_to_docx.paths import native_reference_doc
 from md_to_docx.plugin.loader import load_plugins
-from md_to_docx.plugins.mermaid import MermaidPlugin
 
 
 def test_load_builtin_plugins() -> None:

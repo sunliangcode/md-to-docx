@@ -56,10 +56,7 @@ def test_has_heading(native_sample: Path):
 
 def test_yahei_in_styles(native_sample: Path):
     root = _xml(native_sample, "word/styles.xml")
-    east = [
-        el.get(f"{{{NS['w']}}}eastAsia")
-        for el in root.findall(".//w:rFonts", namespaces=NS)
-    ]
+    east = [el.get(f"{{{NS['w']}}}eastAsia") for el in root.findall(".//w:rFonts", namespaces=NS)]
     assert "Microsoft YaHei" in east
 
 

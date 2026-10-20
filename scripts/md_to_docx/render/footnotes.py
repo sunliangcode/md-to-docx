@@ -106,10 +106,7 @@ def _append_inlines(p_el, children: tuple[n.Inline, ...]) -> None:
             run.append(_text_el(child.value))
             p_el.append(run)
         elif isinstance(child, n.Link):
-            text = (
-                "".join(c.value for c in child.children if isinstance(c, n.Text))
-                or child.href
-            )
+            text = "".join(c.value for c in child.children if isinstance(c, n.Text)) or child.href
             p_el.append(_run_with_text(text))
         elif isinstance(child, n.Strike):
             _append_inlines(p_el, child.children)
@@ -232,11 +229,7 @@ def ensure_footnotes_part(
     package = doc.part.package
 
     # Replace existing footnotes relationship if any.
-    drop_rids = [
-        rel.rId
-        for rel in doc.part.rels.values()
-        if rel.reltype == RT.FOOTNOTES
-    ]
+    drop_rids = [rel.rId for rel in doc.part.rels.values() if rel.reltype == RT.FOOTNOTES]
     for rid in drop_rids:
         doc.part.drop_rel(rid)
 

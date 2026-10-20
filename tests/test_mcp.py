@@ -91,9 +91,7 @@ def test_reverse_document(tmp_path: Path):
     )
     assert convert["ok"] is True
     out_md = tmp_path / "back.md"
-    result = handle_reverse_document(
-        {"input_path": str(docx), "output_path": str(out_md)}
-    )
+    result = handle_reverse_document({"input_path": str(docx), "output_path": str(out_md)})
     assert result["ok"] is True
     assert out_md.is_file()
     assert "#" in out_md.read_text(encoding="utf-8")

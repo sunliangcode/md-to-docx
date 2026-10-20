@@ -4,6 +4,44 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Added
+
+- Contributor Covenant Code of Conduct (`CODE_OF_CONDUCT.md`)
+- EditorConfig (`.editorconfig`) for consistent indentation across editors
+- Ruff lint/format config in `pyproject.toml` and a dedicated CI `lint` job
+- pytest-cov with an 83% branch-coverage floor on the Python 3.12 CI matrix cell
+- `pre-commit` config (Ruff + basic file hygiene hooks)
+- Progressive mypy gate on public modules (`api`, `errors`, `ast.nodes`, `preset`, `paths`, `validate`) + CI `typecheck` job
+- CI `audit` job via `pip-audit` in a clean venv (Dependabot already covers pip/npm/Actions)
+- Dev dependency floor `pillow>=12.3.0` for known vulnerability fixes
+- `SUPPORT.md` community help routing
+- OMML unit tests and in-process CLI tests (raise coverage; catch block-math xmlns bug)
+- Expanded HTML preview and Markdown writer tests (`render/html` ~98%, `write/markdown` ~96%)
+- sdist now ships community docs (`CHANGELOG`, `CONTRIBUTING`, `CODE_OF_CONDUCT`, `SECURITY`, `SUPPORT`, `README.zh.md`)
+- Release checklist covers lint, mypy, coverage, pip-audit, and sdist community-file checks
+- `paths` / `validate` unit tests (asset resolution, xrefs, footnotes, strict mode)
+- CI hardening: `permissions: contents: read`, concurrency cancel, pip/npm caches, `fail-fast: false`, extension `npm ci`
+- Footnote unit tests and richer DOCX parse coverage (heading helpers, multi-block fixtures)
+- Composite Action: pip cache + optional `toc` / `numbering` inputs
+- Dependabot groups + PR limits for pip / Actions / npm
+- OMML `mover`/`munder`/`mstyle` tests + plaintext math fallback; `render.styles` unit tests
+- README badges for Ruff and coverage floor; SECURITY.md response targets and scope
+- PEP 561 `py.typed` + `Typing :: Typed` classifier; richer `project.urls`
+- Expanded progressive mypy surface (`load`, `plugin.base`, `diff.ast_diff`, `write.markdown`)
+- Issue template contact links for Support and Security; OSS baseline table in `references/development.md`
+
+### Fixed
+
+- Agensi listing GitHub URL aligned with the canonical `sunliang11/md-to-docx` repo
+- Minor dead assignments / import hygiene caught by Ruff
+- `convert()` mypy arg-type when `source` is narrowed after the missing-input guard
+- Block math no longer crashes on `qn("xmlns:m")` when inserting `m:oMathPara`
+
+### Changed
+
+- CONTRIBUTING and PR template document lint steps and community expectations
+- Dev optional deps include `pytest-cov`, `ruff`, `pre-commit`, `mypy`, and `pip-audit`
+
 ## [1.1.1] - 2026-09-07
 
 ### Fixed

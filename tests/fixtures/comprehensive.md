@@ -22,6 +22,7 @@ def hello_world(name: str) -> str:
     """Say hello in Chinese and English."""
     return f"你好 {name}! Hello {name}!"
 
+
 print(hello_world("世界"))
 ```
 

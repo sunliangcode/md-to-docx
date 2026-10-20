@@ -9,6 +9,17 @@ build/
 venv/
 .pytest_cache/
 .mypy_cache/
+.ruff_cache/
+.coverage
+.coverage.*
+coverage.xml
+coverage.json
+htmlcov/
+.ruff_cache/
+.coverage
+coverage.xml
+coverage.json
+htmlcov/
 
 # IDE
 .idea/

@@ -6,7 +6,6 @@ import sys
 from xml.etree import ElementTree as ET
 
 from docx.oxml import OxmlElement
-from docx.oxml.ns import qn
 from docx.text.paragraph import Paragraph
 
 MATH_NS = "http://schemas.openxmlformats.org/officeDocument/2006/math"
@@ -295,8 +294,8 @@ def add_inline_math(paragraph: Paragraph, latex: str) -> None:
 
 
 def add_block_math(paragraph: Paragraph, latex: str) -> None:
+    # OxmlElement("m:…") already binds the Office Math namespace; do not set xmlns via qn().
     omath_para = OxmlElement("m:oMathPara")
-    omath_para.set(qn("xmlns:m"), MATH_NS)
     try:
         import latex2mathml.converter
 
