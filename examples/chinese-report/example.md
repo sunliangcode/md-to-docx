@@ -5,8 +5,8 @@ author: md-to-docx
 
 # 微服务架构升级技术方案
 
-**版本：** v1.0  
-**日期：** 2026年9月2日  
+**版本：** v1.0
+**日期：** 2026年9月2日
 **编制：** 架构组
 
 ## 一、项目背景
@@ -61,10 +61,10 @@ author: md-to-docx
 ```python
 # 文档编译核心逻辑
 def compile_document(source_path: str) -> str:
-  """将 Markdown 编译为 DOCX，不修改源文件。"""
-  normalized = normalizer.process(read(source_path))
-  output = convert(normalized, preset="technical")
-  return output
+    """将 Markdown 编译为 DOCX，不修改源文件。"""
+    normalized = normalizer.process(read(source_path))
+    output = convert(normalized, preset="technical")
+    return output
 ```
 
 ### 3.3 技术选型

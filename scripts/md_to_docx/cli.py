@@ -250,7 +250,7 @@ def _run_convert(args: argparse.Namespace) -> int:
                 plugin_paths=plugin_paths,
                 no_plugins=no_plugins,
             )
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             failures += 1
             print(f"fail: {md}: {exc}", file=sys.stderr)
 
@@ -269,7 +269,7 @@ def _run_reverse(args: argparse.Namespace) -> int:
         reverse_docx(docx_path, out_path)
         print(f"ok: {docx_path} -> {out_path}")
         return 0
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 1
 
@@ -287,7 +287,7 @@ def _run_diff(args: argparse.Namespace) -> int:
         changes = diff_documents(doc_a, doc_b)
         print(format_diff(changes, fmt=args.diff_format), end="")
         return 0
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 1
 
@@ -298,7 +298,7 @@ def _run_build(args: argparse.Namespace) -> int:
     try:
         if args.target in ("presets", "all"):
             presets_build.main()
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 1
     return 0

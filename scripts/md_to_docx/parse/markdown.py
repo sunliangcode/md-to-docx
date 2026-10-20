@@ -5,6 +5,7 @@ from __future__ import annotations
 import re
 import sys
 from pathlib import Path
+from typing import Literal, cast
 
 from markdown_it import MarkdownIt
 from markdown_it.token import Token
@@ -28,6 +29,18 @@ CALLOUT_PLACEHOLDER_RE = re.compile(r"^\s*<!--\s*odm-callout:(\d+)\s*-->\s*$")
 FIG_ID_RE = re.compile(r"\{#(fig|tbl):([^}]+)\}\s*$")
 XREF_RE = re.compile(r"\[@(fig|tbl|sec):([^\]]+)\]")
 TABLE_CAPTION_RE = re.compile(r"^Table:\s*(.+?)(?:\s*\{#tbl:([^}]+)\})?\s*$", re.I)
+
+
+def _attr_str(value: str | int | float | None) -> str:
+    if value is None:
+        return ""
+    return str(value)
+
+
+def _attr_opt_str(value: str | int | float | None) -> str | None:
+    if value is None:
+        return None
+    return str(value)
 
 
 def _make_md() -> MarkdownIt:
@@ -95,17 +108,17 @@ def _inline_children(tokens: list[Token], start: int, end: int) -> tuple[n.Inlin
             i = close + 1
         elif tok.type == "link_open":
             close = _find_close(tokens, i, "link_close")
-            href = tok.attrGet("href") or ""
-            title = tok.attrGet("title")
+            href = _attr_str(tok.attrGet("href"))
+            title = _attr_opt_str(tok.attrGet("title"))
             children.append(n.Link(href, _inline_children(tokens, i + 1, close), title=title))
             i = close + 1
         elif tok.type == "image":
-            alt = (tok.attrGet("alt") or tok.content or "").strip()
+            alt = _attr_str(tok.attrGet("alt") or tok.content).strip()
             children.append(
                 n.InlineImage(
-                    src=tok.attrGet("src") or "",
+                    src=_attr_str(tok.attrGet("src")),
                     alt=alt,
-                    title=tok.attrGet("title"),
+                    title=_attr_opt_str(tok.attrGet("title")),
                 )
             )
             i += 1
@@ -224,8 +237,13 @@ def _blocks_from_tokens(
             callout_match = CALLOUT_PLACEHOLDER_RE.match(raw)
             if callout_match:
                 idx = int(callout_match.group(1))
-                kind, children = callout_map[idx]
-                blocks.append(n.Callout(kind=kind, children=children))
+                kind, callout_children = callout_map[idx]
+                blocks.append(
+                    n.Callout(
+                        kind=cast(Literal["warning", "info", "note"], kind),
+                        children=callout_children,
+                    )
+                )
             elif PAGEBREAK_COMMENT.match(raw):
                 blocks.append(n.PageBreak())
             else:
@@ -260,7 +278,7 @@ def _parse_list_items(
             continue
         close = _find_close(tokens, i, "list_item_close")
         checked: bool | None = None
-        cls = tokens[i].attrGet("class") or ""
+        cls = _attr_str(tokens[i].attrGet("class"))
         if "task-list-item" in cls:
             for j in range(i + 1, close):
                 if tokens[j].type == "list_item_open":
@@ -291,7 +309,7 @@ def _parse_table(tokens: list[Token], start: int, end: int) -> n.Table:
             if tokens[j].type in ("th_open", "td_open"):
                 is_header = tokens[j].type == "th_open"
                 cell_close = _find_close(tokens, j, "th_close" if is_header else "td_close")
-                align = tokens[j].attrGet("style") or "default"
+                align = _attr_str(tokens[j].attrGet("style") or "default")
                 if "center" in align:
                     alignment: n.Alignment = "center"
                 elif "right" in align:
@@ -301,11 +319,12 @@ def _parse_table(tokens: list[Token], start: int, end: int) -> n.Table:
                 else:
                     alignment = "default"
                 inline = tokens[j + 1] if j + 1 < cell_close else None
+                cell_children: tuple[n.Block, ...]
                 if inline and inline.type == "inline":
-                    children = (n.Paragraph(_inline_children([inline], 0, 1)),)
+                    cell_children = (n.Paragraph(_inline_children([inline], 0, 1)),)
                 else:
-                    children = ()
-                cells.append(n.TableCell(children=children, align=alignment, header=is_header))
+                    cell_children = ()
+                cells.append(n.TableCell(children=cell_children, align=alignment, header=is_header))
                 j = cell_close + 1
             else:
                 j += 1
@@ -458,11 +477,12 @@ def _split_block_images(blocks: tuple[n.Block, ...]) -> tuple[n.Block, ...]:
                 if cap is not None and i + 1 < len(blocks) and isinstance(blocks[i + 1], n.Table):
                     flush_pending()
                     caption, tbl_id = cap
-                    table = blocks[i + 1]
-                    identifier = f"tbl:{tbl_id}" if tbl_id else table.identifier
+                    table_block = blocks[i + 1]
+                    assert isinstance(table_block, n.Table)
+                    identifier = f"tbl:{tbl_id}" if tbl_id else table_block.identifier
                     result.append(
                         n.Table(
-                            rows=table.rows,
+                            rows=table_block.rows,
                             identifier=identifier,
                             caption=caption,
                         )

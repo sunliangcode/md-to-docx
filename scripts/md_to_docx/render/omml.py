@@ -287,7 +287,7 @@ def add_inline_math(paragraph: Paragraph, latex: str) -> None:
             _insert_omml(paragraph, omath)
             return
         print("warning: math OMML conversion returned empty; using plaintext", file=sys.stderr)
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         print(f"warning: math render failed: {exc}", file=sys.stderr)
     run = paragraph.add_run(latex)
     run.font.name = "Consolas"
@@ -309,7 +309,7 @@ def add_block_math(paragraph: Paragraph, latex: str) -> None:
             "warning: math block OMML conversion returned empty; using plaintext",
             file=sys.stderr,
         )
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         print(f"warning: math block render failed: {exc}", file=sys.stderr)
     run = paragraph.add_run(latex)
     run.font.name = "Consolas"

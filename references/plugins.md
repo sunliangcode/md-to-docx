@@ -10,16 +10,20 @@ from dataclasses import dataclass
 from md_to_docx.plugin.base import PluginBase, PluginContext
 from md_to_docx.ast import nodes as n
 
+
 class MyPlugin(PluginBase):
     name = "my_plugin"
 
-    def render_assets(self, document: n.Document, ctx: PluginContext) -> tuple[n.Document, dict[str, Path]]:
+    def render_assets(
+        self, document: n.Document, ctx: PluginContext
+    ) -> tuple[n.Document, dict[str, Path]]:
         # Optional: render side-effect assets (e.g. Mermaid → PNG)
         return document, {}
 
     def transform(self, document: n.Document, ctx: PluginContext) -> n.Document:
         # Modify AST before DOCX render
         return document
+
 
 plugin = MyPlugin()
 ```

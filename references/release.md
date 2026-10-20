@@ -5,22 +5,23 @@ Do not tag until all items pass.
 ## Quality gates
 
 1. `pip install -e ".[dev,mcp,web]"`
-2. `ruff check scripts/md_to_docx tests && ruff format --check scripts/md_to_docx tests`
-3. `mypy`
-4. `pytest tests/ -v --cov=md_to_docx --cov-fail-under=83`
-5. `python -m venv /tmp/md2docx-audit && /tmp/md2docx-audit/bin/pip install -U pip setuptools wheel && /tmp/md2docx-audit/bin/pip install -e ".[dev,mcp,web]" && /tmp/md2docx-audit/bin/pip-audit`
-6. `bash scripts/demo/build_examples.sh` — example docx regenerated
-7. `python -m md_to_docx.presets_build` — templates committed when styles change
+2. `./scripts/ci_local.sh --all` (or `--integration --audit --extension --mermaid` individually)
+3. `ruff check scripts/md_to_docx tests && ruff format --check scripts/md_to_docx tests`
+4. `mypy`
+5. `pytest tests/ -v --cov=md_to_docx --cov-fail-under=83`
+6. `python -m venv /tmp/md2docx-audit && /tmp/md2docx-audit/bin/pip install -U pip setuptools wheel && /tmp/md2docx-audit/bin/pip install -e ".[dev,mcp,web]" && /tmp/md2docx-audit/bin/pip-audit`
+7. `bash scripts/demo/build_examples.sh` — example docx regenerated
+8. `python -m md_to_docx.presets_build` — templates committed when styles change
 
 ## Version & notes
 
-8. Bump version in `pyproject.toml` and `scripts/md_to_docx/__init__.py`
-9. `CHANGELOG.md` — move `[Unreleased]` notes under a dated `[x.y.z]` section
-10. Confirm sdist includes community docs (`LICENSE`, `CHANGELOG`, `CONTRIBUTING`, `CODE_OF_CONDUCT`, `SECURITY`, `SUPPORT`)
+9. Bump version in `pyproject.toml` and `scripts/md_to_docx/__init__.py`
+10. `CHANGELOG.md` — move `[Unreleased]` notes under a dated `[x.y.z]` section
+11. Confirm sdist includes community docs (`LICENSE`, `CHANGELOG`, `CONTRIBUTING`, `CODE_OF_CONDUCT`, `SECURITY`, `SUPPORT`)
 
 ## Tag & publish
 
-11. User runs (when ready):
+12. User runs (when ready):
 
 ```bash
 git tag vX.Y.Z

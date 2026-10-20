@@ -60,7 +60,7 @@ python -m md_to_docx --help
 
 ## Lint
 
-We use [Ruff](https://docs.astral.sh/ruff/) (configured in `pyproject.toml`):
+We use [Ruff](https://docs.astral.sh/ruff/) (configured in `pyproject.toml`; includes bugbear `B` and stale-`noqa` `RUF100`):
 
 ```bash
 pip install -e ".[dev]"
@@ -76,6 +76,20 @@ pre-commit run --all-files
 ```
 
 CI runs `ruff check` and `ruff format --check` on every PR.
+
+One-shot local gate (pre-commit + mypy + pytest coverage):
+
+```bash
+./scripts/ci_local.sh
+# optional: same extras as the CI test job (examples, templates, MCP help):
+./scripts/ci_local.sh --integration
+# optional supply-chain audit (slower):
+./scripts/ci_local.sh --audit
+# full local CI parity (integration, audit, extension, mermaid when mmdc exists):
+./scripts/ci_local.sh --all
+# optional Python 3.10/3.11 matrix when installed:
+./scripts/ci_local.sh --matrix
+```
 
 ## Type check (progressive)
 

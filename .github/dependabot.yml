@@ -51,3 +51,15 @@ updates:
       browser-extension:
         patterns:
           - "*"
+
+  - package-ecosystem: npm
+    directory: "/editors/vscode"
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 3
+    labels:
+      - dependencies
+    groups:
+      vscode-extension:
+        patterns:
+          - "*"

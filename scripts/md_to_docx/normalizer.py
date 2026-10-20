@@ -75,7 +75,7 @@ class MarkdownNormalizer:
             (r"^\(([一二三四五六七八九十]+)\)\s*", lambda _m: ""),
         ]
 
-        for pattern, replacement in patterns:
+        for pattern, _ in patterns:
             match = re.match(pattern, text)
             if match:
                 chinese_num = match.group(1)

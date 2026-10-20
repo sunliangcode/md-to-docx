@@ -111,7 +111,9 @@ def handle_validate_document(args: dict[str, Any]) -> dict[str, Any]:
         if markdown is not None:
             issues = validate_markdown(markdown, strict=strict)
         else:
-            path = Path(input_path).expanduser().resolve()
+            if input_path is None:
+                return _error_dict(missing_input())
+            path = Path(str(input_path)).expanduser().resolve()
             if not path.is_file():
                 return _error_dict(
                     MdToDocxError(
@@ -175,7 +177,7 @@ def handle_reverse_document(args: dict[str, Any]) -> dict[str, Any]:
 
     try:
         reverse_docx(source, output)
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         return _error_dict(
             MdToDocxError(
                 "Reverse failed",
@@ -213,7 +215,7 @@ def handle_diff_documents(args: dict[str, Any]) -> dict[str, Any]:
         doc_b = load_document(Path(path_b).expanduser().resolve())
         changes = diff_documents(doc_a, doc_b)
         rendered = format_diff(changes, fmt=fmt)
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         return _error_dict(
             MdToDocxError(
                 "Diff failed",

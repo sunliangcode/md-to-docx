@@ -15,11 +15,6 @@ venv/
 coverage.xml
 coverage.json
 htmlcov/
-.ruff_cache/
-.coverage
-coverage.xml
-coverage.json
-htmlcov/
 
 # IDE
 .idea/

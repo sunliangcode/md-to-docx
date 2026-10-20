@@ -5,7 +5,7 @@ author: md-to-docx
 
 # Q3 2026 Business Review
 
-**Period:** July 1 – September 30, 2026  
+**Period:** July 1 – September 30, 2026
 **Prepared by:** Strategy & Operations
 
 ## Overview

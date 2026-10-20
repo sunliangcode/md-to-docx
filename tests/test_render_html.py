@@ -50,13 +50,7 @@ def test_render_inline_formatting_and_links():
 
 
 def test_render_lists_code_quote_hr():
-    md = (
-        "1. one\n2. two\n\n"
-        "- bullet\n\n"
-        "```py\nprint(1)\n```\n\n"
-        "> quote\n\n"
-        "---\n"
-    )
+    md = "1. one\n2. two\n\n- bullet\n\n```py\nprint(1)\n```\n\n> quote\n\n---\n"
     html_out = render_html(parse_markdown(md))
     assert "<ol>" in html_out and "<ul>" in html_out
     assert 'class="language-py"' in html_out
@@ -98,11 +92,7 @@ def test_render_image_figure_toc_html_block_and_title():
                 )
             ),
             n.Table(
-                rows=(
-                    (
-                        n.TableCell(children=(n.Paragraph((n.Text("H"),)),), header=True),
-                    ),
-                ),
+                rows=((n.TableCell(children=(n.Paragraph((n.Text("H"),)),), header=True),),),
                 caption="Tbl",
             ),
         ),

@@ -126,15 +126,25 @@ pretty = true
 # Progressive: expand `files` as more modules are typed.
 files = [
     "scripts/md_to_docx/api.py",
+    "scripts/md_to_docx/cli.py",
+    "scripts/md_to_docx/converter.py",
     "scripts/md_to_docx/errors.py",
     "scripts/md_to_docx/ast/nodes.py",
+    "scripts/md_to_docx/normalizer.py",
     "scripts/md_to_docx/preset.py",
     "scripts/md_to_docx/paths.py",
     "scripts/md_to_docx/validate.py",
     "scripts/md_to_docx/load.py",
-    "scripts/md_to_docx/plugin/base.py",
+    "scripts/md_to_docx/reverse.py",
+    "scripts/md_to_docx/plugin",
     "scripts/md_to_docx/diff/ast_diff.py",
+    "scripts/md_to_docx/transform",
     "scripts/md_to_docx/write/markdown.py",
+    "scripts/md_to_docx/mcp/handlers.py",
+    "scripts/md_to_docx/mcp/paths.py",
+    "scripts/md_to_docx/mcp/server.py",
+    "scripts/md_to_docx/render",
+    "scripts/md_to_docx/parse",
 ]
 
 [tool.ruff]
@@ -149,6 +159,8 @@ select = [
     "F",   # pyflakes
     "I",   # isort
     "UP",  # pyupgrade
+    "B",   # flake8-bugbear (common footguns)
+    "RUF100",  # stale noqa directives
 ]
 ignore = [
     "E501",  # line length handled by formatter / reviews

@@ -11,6 +11,7 @@ import hashlib
 import re
 import sys
 from pathlib import Path
+from typing import NoReturn
 
 from md_to_docx.normalizer import normalize_markdown_content
 
@@ -30,7 +31,7 @@ DEFAULT_EXCLUDE_PATTERNS: tuple[str, ...] = (
 ALWAYS_SKIP_DIRS: frozenset[str] = frozenset({".git", "node_modules"})
 
 
-def die(msg: str, code: int = 1) -> None:
+def die(msg: str, code: int = 1) -> NoReturn:
     print(f"error: {msg}", file=sys.stderr)
     raise SystemExit(code)
 

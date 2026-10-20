@@ -30,6 +30,9 @@ mypy   # progressive public surface; see [tool.mypy] in pyproject.toml
 ```bash
 pytest tests/ -v
 pytest tests/ -v --cov=md_to_docx --cov-fail-under=83
+# or all Python CI gates (+ optional CI test-job smoke):
+./scripts/ci_local.sh
+./scripts/ci_local.sh --integration
 ```
 
 `lxml` is a runtime dependency. Mermaid rendering needs `mmdc` on PATH; the main CI job does not require it (diagrams are optional unless `--strict-mermaid`).
@@ -110,10 +113,23 @@ This repo targets a maintainable, contributable, publishable open-source baselin
 |------|----------|
 | Community health | `LICENSE`, `README` (+zh), `CONTRIBUTING`, `CODE_OF_CONDUCT`, `SECURITY`, `SUPPORT`, `CHANGELOG` |
 | Contribution UX | Issue/PR templates, `blank_issues_enabled: false`, contact links |
-| Quality gates | CI: Ruff lint/format, progressive mypy, pytest + ≥83% branch coverage, `pip-audit` |
-| Local DX | `.editorconfig`, `.pre-commit-config.yaml`, `pip install -e ".[dev,…]"` |
-| Supply chain | Dependabot (pip / Actions / npm groups), clean-venv audit job |
+| Quality gates | CI: pre-commit, Ruff (incl. bugbear), progressive mypy (~38 modules), pytest + ≥83% branch coverage, `pip-audit` |
+| Local DX | `.editorconfig`, `.pre-commit-config.yaml`, `./scripts/ci_local.sh --all` mirrors all CI jobs, `pip install -e ".[dev,…]"` |
+| Supply chain | Dependabot (pip / Actions / browser-extension + VS Code npm groups), clean-venv audit job |
 | Packaging | Hatch/`pyproject.toml`, `py.typed`, sdist ships community docs, `release.yml` |
 | Ops hygiene | CI `permissions: contents: read`, concurrency cancel, pip/npm caches |
 
 Release steps: [release.md](release.md).
+
+### Map CI jobs → `ci_local.sh`
+
+| GitHub Actions job | Local command |
+|--------------------|---------------|
+| `pre-commit` + `lint` | default (pre-commit hooks, Ruff on `scripts/md_to_docx` + `tests`) |
+| `typecheck` | default (`mypy`) |
+| `test` (3.12 + coverage) | default (`pytest --cov-fail-under=83`) |
+| `test` (3.10 / 3.11 matrix) | `--matrix` or `--all` |
+| `test` (CLI/examples/templates) | `--integration` or `--all` |
+| `audit` | `--audit` or `--all` |
+| `extension` | `--extension` or `--all` |
+| `mermaid` | `--mermaid` or `--all` (skips if `mmdc` missing) |

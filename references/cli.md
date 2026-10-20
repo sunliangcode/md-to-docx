@@ -76,7 +76,7 @@ which md-to-docx              # should print a path in your venv or ~/.local/bin
 md-to-docx --version
 ```
 
-> **Not on PyPI yet.** Package name is `md2docx-compiler`; the only CLI command is **`md-to-docx`**.  
+> **Not on PyPI yet.** Package name is `md2docx-compiler`; the only CLI command is **`md-to-docx`**.
 > After `pip install -e .`, PATH gains a single script: **`md-to-docx`**. MCP is the subcommand `md-to-docx mcp` (requires `[mcp]` extra).
 
 ### Optional shell alias
@@ -144,7 +144,7 @@ md-to-docx convert [options] PATH
 | `--skip-existing` | off | Skip if output `.docx` already exists |
 | `--dry-run` | off | Print planned conversions without writing files |
 
-**Default exclusions** (directory scans only): `README.md`, `CHANGELOG.md`, `SKILL.md`, `.github/**`.  
+**Default exclusions** (directory scans only): `README.md`, `CHANGELOG.md`, `SKILL.md`, `.github/**`.
 **Always skipped directories:** `.git/`, `node_modules/`.
 
 ```bash

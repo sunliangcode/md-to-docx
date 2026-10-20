@@ -39,7 +39,7 @@ class MermaidPlugin(PluginBase):
                     key = f"mermaid:{hash(block.source)}"
                     media_paths[key] = png
                     new_blocks.append(block)
-                except Exception as exc:  # noqa: BLE001
+                except Exception as exc:
                     msg = f"mermaid render failed: {exc}"
                     if ctx.strict_mermaid:
                         raise RuntimeError(msg) from exc

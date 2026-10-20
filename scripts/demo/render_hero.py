@@ -43,33 +43,41 @@ def _frame(lines: list[tuple[str, str]]) -> Image.Image:
 
 def main() -> None:
     frames = [
-        _frame([
-            ("$ ./bin/convert examples/technical-report/example.md", FG),
-            ("", FG),
-            ("Converting examples/technical-report/example.md ...", FG),
-        ]),
-        _frame([
-            ("$ ./bin/convert examples/technical-report/example.md", FG),
-            ("", FG),
-            ("Converting examples/technical-report/example.md ...", FG),
-            ("done: 1/1 succeeded", GREEN),
-        ]),
-        _frame([
-            ("$ ./bin/convert examples/technical-report/example.md", FG),
-            ("", FG),
-            ("Converting examples/technical-report/example.md ...", FG),
-            ("done: 1/1 succeeded", GREEN),
-            ("", FG),
-            ("→ examples/technical-report/example.docx", BLUE),
-        ]),
-        _frame([
-            ("$ ./bin/convert examples/technical-report/example.md", FG),
-            ("", FG),
-            ("done: 1/1 succeeded", GREEN),
-            ("→ examples/technical-report/example.docx", BLUE),
-            ("", FG),
-            ("Professional Word document ready.", GREEN),
-        ]),
+        _frame(
+            [
+                ("$ ./bin/convert examples/technical-report/example.md", FG),
+                ("", FG),
+                ("Converting examples/technical-report/example.md ...", FG),
+            ]
+        ),
+        _frame(
+            [
+                ("$ ./bin/convert examples/technical-report/example.md", FG),
+                ("", FG),
+                ("Converting examples/technical-report/example.md ...", FG),
+                ("done: 1/1 succeeded", GREEN),
+            ]
+        ),
+        _frame(
+            [
+                ("$ ./bin/convert examples/technical-report/example.md", FG),
+                ("", FG),
+                ("Converting examples/technical-report/example.md ...", FG),
+                ("done: 1/1 succeeded", GREEN),
+                ("", FG),
+                ("→ examples/technical-report/example.docx", BLUE),
+            ]
+        ),
+        _frame(
+            [
+                ("$ ./bin/convert examples/technical-report/example.md", FG),
+                ("", FG),
+                ("done: 1/1 succeeded", GREEN),
+                ("→ examples/technical-report/example.docx", BLUE),
+                ("", FG),
+                ("Professional Word document ready.", GREEN),
+            ]
+        ),
     ]
     OUT.parent.mkdir(parents=True, exist_ok=True)
     frames[0].save(

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from docx import Document
+from docx.document import Document as DocxDocument
 from docx.enum.style import WD_STYLE_TYPE
 from docx.enum.text import WD_LINE_SPACING
 from docx.oxml import OxmlElement
@@ -33,7 +33,7 @@ def _set_fonts(style, *, latin: str | None = None, east_asia: str | None = None)
         rfonts.set(qn("w:eastAsia"), east_asia)
 
 
-def set_theme_font_lang(doc: Document, latin: str = "en-US", east_asia: str = "zh-CN") -> None:
+def set_theme_font_lang(doc: DocxDocument, latin: str = "en-US", east_asia: str = "zh-CN") -> None:
     settings = doc.settings.element
     theme_font_lang = settings.find(qn("w:themeFontLang"))
     if theme_font_lang is None:
@@ -43,14 +43,14 @@ def set_theme_font_lang(doc: Document, latin: str = "en-US", east_asia: str = "z
     theme_font_lang.set(qn("w:eastAsia"), east_asia)
 
 
-def _ensure_paragraph_style(doc: Document, name: str) -> None:
+def _ensure_paragraph_style(doc: DocxDocument, name: str) -> None:
     try:
         doc.styles[name]
     except KeyError:
         doc.styles.add_style(name, WD_STYLE_TYPE.PARAGRAPH)
 
 
-def _apply_heading_color(doc: Document, color: RGBColor) -> None:
+def _apply_heading_color(doc: DocxDocument, color: RGBColor) -> None:
     for level in range(1, 7):
         for name in (f"Heading {level}", f"Heading {level} Char"):
             try:
@@ -61,7 +61,7 @@ def _apply_heading_color(doc: Document, color: RGBColor) -> None:
 
 
 def configure_document_styles(
-    doc: Document,
+    doc: DocxDocument,
     *,
     force: bool = False,
     heading_color: RGBColor | None = None,

@@ -1116,25 +1116,31 @@ from typing import Literal, Union
 
 Alignment = Literal["left", "center", "right", "default"]
 
+
 @dataclass(frozen=True, slots=True)
 class Text:
     value: str
+
 
 @dataclass(frozen=True, slots=True)
 class Strong:
     children: tuple[Inline, ...]
 
+
 @dataclass(frozen=True, slots=True)
 class Emphasis:
     children: tuple[Inline, ...]
+
 
 @dataclass(frozen=True, slots=True)
 class Strike:
     children: tuple[Inline, ...]
 
+
 @dataclass(frozen=True, slots=True)
 class Code:
     value: str
+
 
 @dataclass(frozen=True, slots=True)
 class Link:
@@ -1142,23 +1148,26 @@ class Link:
     children: tuple[Inline, ...]
     title: str | None = None
 
+
 @dataclass(frozen=True, slots=True)
 class InlineImage:
     src: str
     alt: str = ""
     title: str | None = None
 
+
 @dataclass(frozen=True, slots=True)
 class Break:
     """Hard line break."""
+
 
 @dataclass(frozen=True, slots=True)
 class SoftBreak:
     pass
 
-Inline = Union[
-    Text, Strong, Emphasis, Strike, Code, Link, InlineImage, Break, SoftBreak
-]
+
+Inline = Union[Text, Strong, Emphasis, Strike, Code, Link, InlineImage, Break, SoftBreak]
+
 
 @dataclass(frozen=True, slots=True)
 class Heading:
@@ -1166,14 +1175,17 @@ class Heading:
     children: tuple[Inline, ...]
     anchor: str | None = None
 
+
 @dataclass(frozen=True, slots=True)
 class Paragraph:
     children: tuple[Inline, ...]
+
 
 @dataclass(frozen=True, slots=True)
 class ListItem:
     children: tuple[Block, ...]
     checked: bool | None = None  # None=not a task; True/False=task
+
 
 @dataclass(frozen=True, slots=True)
 class ListBlock:
@@ -1182,29 +1194,35 @@ class ListBlock:
     start: int = 1
     tight: bool = True
 
+
 @dataclass(frozen=True, slots=True)
 class TableCell:
     children: tuple[Block, ...]
     align: Alignment = "default"
     header: bool = False
 
+
 @dataclass(frozen=True, slots=True)
 class Table:
     rows: tuple[tuple[TableCell, ...], ...]
     # rows[0] is header if any(cell.header for cell in rows[0])
+
 
 @dataclass(frozen=True, slots=True)
 class CodeBlock:
     text: str
     lang: str | None = None
 
+
 @dataclass(frozen=True, slots=True)
 class BlockQuote:
     children: tuple[Block, ...]
 
+
 @dataclass(frozen=True, slots=True)
 class ThematicBreak:
     pass
+
 
 @dataclass(frozen=True, slots=True)
 class Image:
@@ -1212,19 +1230,32 @@ class Image:
     alt: str = ""
     title: str | None = None
 
+
 @dataclass(frozen=True, slots=True)
 class PageBreak:
     pass
 
+
 @dataclass(frozen=True, slots=True)
 class HTMLBlock:
     """Passthrough; renderer ignores or dumps as text in P1A."""
+
     raw: str
 
+
 Block = Union[
-    Heading, Paragraph, ListBlock, Table, CodeBlock, BlockQuote,
-    ThematicBreak, Image, PageBreak, HTMLBlock,
+    Heading,
+    Paragraph,
+    ListBlock,
+    Table,
+    CodeBlock,
+    BlockQuote,
+    ThematicBreak,
+    Image,
+    PageBreak,
+    HTMLBlock,
 ]
+
 
 @dataclass(frozen=True, slots=True)
 class Metadata:
@@ -1232,6 +1263,7 @@ class Metadata:
     author: str | None = None
     date: str | None = None
     extra: tuple[tuple[str, str], ...] = ()
+
 
 @dataclass(frozen=True, slots=True)
 class Document:
@@ -1367,8 +1399,7 @@ from mdit_py_plugins.strikethrough import strikethrough_plugin  # 若 GFM 已含
 ##### 3.3 公共 API
 
 ```python
-def parse_markdown(text: str, *, source_path: Path | None = None) -> Document:
-    ...
+def parse_markdown(text: str, *, source_path: Path | None = None) -> Document: ...
 ```
 
 `source_path` 仅用于解析相对图片路径（存 Metadata.extra 或让 Image.src 保持相对，renderer 用 source_path.parent 去找文件）。**Image.src 保持 Markdown 里的相对路径字符串，不要在 parser 里读文件。**
@@ -1422,8 +1453,9 @@ CODE_SIZE_PT = 9
 ##### 4.2 Renderer API
 
 ```python
-def render_docx(document: ast.Document, out_path: Path, *, base_dir: Path | None = None) -> None:
-    ...
+def render_docx(
+    document: ast.Document, out_path: Path, *, base_dir: Path | None = None
+) -> None: ...
 ```
 
 - `base_dir` 用于解析 `Image.src`
@@ -1472,6 +1504,7 @@ def convert_native(md_path: Path, out_docx: Path, *, normalize: bool = True) -> 
     text = md_path.read_text(encoding="utf-8")
     if normalize:
         from md_to_docx.converter import normalize_md
+
         text = normalize_md(text)
     doc = parse_markdown(text, source_path=md_path)
     render_docx(doc, out_docx, base_dir=md_path.parent)
@@ -2012,13 +2045,16 @@ class Mermaid:
     source: str
     diagram_hint: str | None = None  # flowchart / sequence / ...
 
+
 @dataclass(frozen=True, slots=True)
 class MathBlock:
     latex: str
 
+
 @dataclass(frozen=True, slots=True)
 class MathInline:  # 加入 Inline union
     latex: str
+
 
 @dataclass(frozen=True, slots=True)
 class Figure:
@@ -2027,14 +2063,17 @@ class Figure:
     identifier: str  # fig:arch
     number: int | None = None  # transformer 填写
 
+
 @dataclass(frozen=True, slots=True)
 class CrossRef:
     kind: Literal["fig", "tbl", "sec"]
     identifier: str  # 不含 kind 前缀或含，解析时规范化成 "fig:arch"
 
+
 @dataclass(frozen=True, slots=True)
 class FootnoteRef:  # Inline
     key: str
+
 
 @dataclass(frozen=True, slots=True)
 class FootnoteDef:  # 可放 Document.footnotes
@@ -2248,12 +2287,18 @@ Parser/AST 仍禁止 import docx。MathML 转换在 `render/`。
 
 ```python
 PRESETS: dict[str, Preset] = {
-  "professional": Preset(template="professional.docx", engine="native", toc=True, numbering=False, figure_label="Figure"),
-  "technical": Preset(template="technical.docx", engine="native", toc=True, numbering=True),
-  "academic": Preset(template="academic.docx", engine="native", toc=True, numbering=True),
-  "business": Preset(template="business.docx", engine="native", toc=False),
-  "report": Preset(template="report.docx", engine="native", toc=True),
-  "wecom": Preset(template=None, engine="pandoc", toc=False),
+    "professional": Preset(
+        template="professional.docx",
+        engine="native",
+        toc=True,
+        numbering=False,
+        figure_label="Figure",
+    ),
+    "technical": Preset(template="technical.docx", engine="native", toc=True, numbering=True),
+    "academic": Preset(template="academic.docx", engine="native", toc=True, numbering=True),
+    "business": Preset(template="business.docx", engine="native", toc=False),
+    "report": Preset(template="report.docx", engine="native", toc=True),
+    "wecom": Preset(template=None, engine="pandoc", toc=False),
 }
 ```
 
@@ -2584,8 +2629,7 @@ def convert(
     engine: str | None = None,
     toc: bool | None = None,
     markdown_text: str | None = None,
-) -> ConvertResult:
-    ...
+) -> ConvertResult: ...
 ```
 
 `source` 可以是 Path；若 `markdown_text` 提供则写入 temp md 再转。
@@ -3370,8 +3414,10 @@ P3B 的 Plugin API 应挂在 parse/transform/render 钩子上。reverse 不要�
 ```python
 class Plugin(Protocol):
     name: str
+
     def transform(self, document: Document) -> Document:
         return document
+
 
 @dataclass
 class PluginContext:
@@ -3386,6 +3432,7 @@ class PluginContext:
 ```python
 class Plugin(Protocol):
     name: str
+
     def render_assets(self, document: Document, ctx: PluginContext) -> Document: ...
     def transform(self, document: Document, ctx: PluginContext) -> Document: ...
 ```
@@ -3672,7 +3719,7 @@ Gate B–D：各自补充 Execution log 证据链后再写子任务落地 PR。
 
 #### 战略收口（给人类看）
 
-错误路线：无限加 Markdown 方言。  
+错误路线：无限加 Markdown 方言。
 正确路线：AI → Markdown → Document Compiler → Professional DOCX，入口可以很多，引擎只有一个，且开源。
 
 ---

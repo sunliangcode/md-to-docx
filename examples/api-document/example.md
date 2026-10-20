@@ -5,7 +5,7 @@ author: md-to-docx
 
 # Documents API Reference
 
-**Version:** v1.0  
+**Version:** v1.0
 **Base URL:** `https://api.example.com/v1`
 
 ## Authentication

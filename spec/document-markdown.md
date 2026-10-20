@@ -1,6 +1,6 @@
 # Open Document Markdown (ODM)
 
-**Version:** `odm-0.1`  
+**Version:** `odm-0.1`
 **Status:** Draft — describes syntax implemented by [md-to-docx](https://github.com/sunliang11/md-to-docx) native engine.
 
 ODM is the Markdown dialect that md-to-docx compiles into professional DOCX. It extends CommonMark + GFM with document-oriented features (page breaks, captions, callouts, math, Mermaid).

@@ -4,7 +4,8 @@ from __future__ import annotations
 
 import asyncio
 import sys
-from typing import Any
+from collections.abc import Callable
+from typing import Any, TypedDict
 
 from md_to_docx import __version__
 from md_to_docx.mcp.handlers import (
@@ -16,7 +17,16 @@ from md_to_docx.mcp.handlers import (
     handle_validate_document,
 )
 
-TOOL_HANDLERS = {
+
+class _ToolSchema(TypedDict):
+    name: str
+    description: str
+    inputSchema: dict[str, Any]
+
+
+McpHandler = Callable[[dict[str, Any]], dict[str, Any]]
+
+TOOL_HANDLERS: dict[str, McpHandler] = {
     "convert_markdown": handle_convert_markdown,
     "apply_template": handle_apply_template,
     "validate_document": handle_validate_document,
@@ -25,7 +35,7 @@ TOOL_HANDLERS = {
     "diff_documents": handle_diff_documents,
 }
 
-TOOL_SCHEMAS = [
+TOOL_SCHEMAS: list[_ToolSchema] = [
     {
         "name": "convert_markdown",
         "description": (
@@ -131,18 +141,18 @@ async def _run_server() -> None:
 
     server = Server("md-to-docx")
 
-    @server.list_tools()
+    @server.list_tools()  # type: ignore[attr-defined]
     async def list_tools() -> list[Tool]:
         return [
             Tool(
                 name=schema["name"],
                 description=schema["description"],
-                inputSchema=schema["inputSchema"],
+                input_schema=schema["inputSchema"],
             )
             for schema in TOOL_SCHEMAS
         ]
 
-    @server.call_tool()
+    @server.call_tool()  # type: ignore[attr-defined]
     async def call_tool(name: str, arguments: dict[str, Any]) -> list[TextContent]:
         handler = TOOL_HANDLERS.get(name)
         if handler is None:

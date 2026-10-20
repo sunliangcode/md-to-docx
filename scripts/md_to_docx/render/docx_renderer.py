@@ -5,7 +5,7 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
-from docx import Document
+from docx.document import Document as DocxDocument
 from docx.enum.text import WD_BREAK
 from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
@@ -92,7 +92,7 @@ def _apply_list_level(paragraph: Paragraph, ordered: bool, level: int) -> None:
 class DocxRenderer:
     def __init__(
         self,
-        doc: Document,
+        doc: DocxDocument,
         *,
         base_dir: Path | None = None,
         figure_label: str = "Figure",

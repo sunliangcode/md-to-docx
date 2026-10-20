@@ -5,8 +5,8 @@ date: 2026-09-02
 
 # Sprint Planning — September 2, 2026
 
-**Attendees:** Alice (PM), Bob (Eng Lead), Carol (Design), Dave (QA)  
-**Duration:** 60 minutes  
+**Attendees:** Alice (PM), Bob (Eng Lead), Carol (Design), Dave (QA)
+**Duration:** 60 minutes
 **Location:** Conference Room B / Zoom
 
 ## Agenda
@@ -71,7 +71,7 @@ Dave confirmed the examples conversion step can run on the existing Ubuntu matri
 
 ## Next Meeting
 
-**Date:** September 9, 2026  
+**Date:** September 9, 2026
 **Focus:** P0 acceptance review and P1A kickoff
 
 ## Parking Lot

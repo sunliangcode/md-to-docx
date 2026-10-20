@@ -2,14 +2,14 @@
 
 from __future__ import annotations
 
-from docx import Document
+from docx.document import Document as DocxDocument
 from docx.enum.text import WD_ALIGN_PARAGRAPH
 
 from md_to_docx.render.fields import add_page_field
 
 
 def apply_header_footer(
-    doc: Document,
+    doc: DocxDocument,
     *,
     title: str | None = None,
     author: str | None = None,

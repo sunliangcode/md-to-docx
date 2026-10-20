@@ -29,6 +29,12 @@ jobs:
       - name: Install dependencies
         run: pip install -e ".[dev,mcp,web]" build
 
+      - name: Pre-commit (lint + hygiene)
+        run: pre-commit run --all-files
+
+      - name: Mypy (progressive public surface)
+        run: mypy
+
       - name: Run tests
         run: pytest tests/ -v --cov=md_to_docx --cov-fail-under=83
 

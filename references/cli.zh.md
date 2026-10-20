@@ -76,7 +76,7 @@ which md-to-docx              # 应输出 venv 或 ~/.local/bin 下的路径
 md-to-docx --version
 ```
 
-> **暂未发布 PyPI。** Python 包名 `md2docx-compiler`，唯一命令行名是 **`md-to-docx`**。  
+> **暂未发布 PyPI。** Python 包名 `md2docx-compiler`，唯一命令行名是 **`md-to-docx`**。
 > `pip install -e .` 后 PATH 里只会增加 **`md-to-docx`**。MCP 通过子命令 `md-to-docx mcp` 启动（需安装 `[mcp]` 扩展）。
 
 ### 可选：shell alias
@@ -144,7 +144,7 @@ md-to-docx convert [选项] PATH
 | `--skip-existing` | 关 | 若输出 `.docx` 已存在则跳过 |
 | `--dry-run` | 关 | 只打印计划转换的文件，不实际写入 |
 
-**目录扫描默认排除：** `README.md`、`CHANGELOG.md`、`SKILL.md`、`.github/**`。  
+**目录扫描默认排除：** `README.md`、`CHANGELOG.md`、`SKILL.md`、`.github/**`。
 **始终跳过的目录：** `.git/`、`node_modules/`。
 
 ```bash

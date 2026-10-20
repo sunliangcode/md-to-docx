@@ -5,7 +5,10 @@ repos:
     hooks:
       - id: ruff
         args: [--fix]
+        # Match CI lint scope (see .github/workflows/ci.yml).
+        files: ^(scripts/md_to_docx|tests)/
       - id: ruff-format
+        files: ^(scripts/md_to_docx|tests)/
 
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v5.0.0
@@ -13,6 +16,9 @@ repos:
       - id: trailing-whitespace
       - id: end-of-file-fixer
       - id: check-yaml
+      - id: check-toml
+      - id: mixed-line-ending
+        args: [--fix=lf]
       - id: check-added-large-files
         args: [--maxkb=2048]
       - id: check-merge-conflict

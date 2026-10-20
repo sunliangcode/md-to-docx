@@ -387,9 +387,7 @@ async def static_cache_headers(request: Request, call_next):
     if path.endswith((".css", ".js")):
         # Versioned assets (?v=) are content-addressed; otherwise avoid sticky stale JS/CSS.
         if "v=" in (request.url.query or ""):
-            response.headers.setdefault(
-                "Cache-Control", "public, max-age=31536000, immutable"
-            )
+            response.headers.setdefault("Cache-Control", "public, max-age=31536000, immutable")
         else:
             response.headers.setdefault("Cache-Control", "no-cache")
     elif path in ("/", "/index.html"):
@@ -556,9 +554,7 @@ def _batch_convert_sync(
         apply_default_excludes=True,
     )
     if len(md_files) > MAX_BATCH_FILES:
-        raise ValueError(
-            f"too many markdown files ({len(md_files)}); max is {MAX_BATCH_FILES}"
-        )
+        raise ValueError(f"too many markdown files ({len(md_files)}); max is {MAX_BATCH_FILES}")
     if not md_files:
         raise ValueError("no .md files found after excludes")
 
@@ -989,9 +985,7 @@ async def api_convert_batch(request: Request):
         template_path.write_bytes(tpl_data)
     else:
         tpl_key = form.get("template")
-        template_path = _resolve_community_template(
-            str(tpl_key) if tpl_key else None
-        )
+        template_path = _resolve_community_template(str(tpl_key) if tpl_key else None)
 
     work = Path(tempfile.mkdtemp(prefix="md_to_docx_batch_"))
     source_dir = work / "src"
@@ -1045,9 +1039,7 @@ async def api_convert_batch(request: Request):
                 source_dir=source_dir,
                 preset=preset,
                 toc=_parse_optional_bool(str(toc) if toc is not None else None),
-                numbering=_parse_optional_bool(
-                    str(numbering) if numbering is not None else None
-                ),
+                numbering=_parse_optional_bool(str(numbering) if numbering is not None else None),
                 toc_title=str(form["toc_title"]) if form.get("toc_title") else None,
                 title=str(form["title"]) if form.get("title") else None,
                 author=str(form["author"]) if form.get("author") else None,
@@ -1057,9 +1049,7 @@ async def api_convert_batch(request: Request):
                 template_path=template_path,
                 figure_label=str(form["figure_label"]) if form.get("figure_label") else None,
                 table_label=str(form["table_label"]) if form.get("table_label") else None,
-                section_label=str(form["section_label"])
-                if form.get("section_label")
-                else None,
+                section_label=str(form["section_label"]) if form.get("section_label") else None,
                 normalize=_parse_bool(form.get("normalize"), True),
                 no_plugins=_parse_bool(form.get("no_plugins"), False),
                 strict_mermaid=_parse_bool(form.get("strict_mermaid"), False),

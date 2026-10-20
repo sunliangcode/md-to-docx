@@ -29,9 +29,21 @@ All notable changes to this project will be documented in this file.
 - PEP 561 `py.typed` + `Typing :: Typed` classifier; richer `project.urls`
 - Expanded progressive mypy surface (`load`, `plugin.base`, `diff.ast_diff`, `write.markdown`)
 - Issue template contact links for Support and Security; OSS baseline table in `references/development.md`
+- CI `pre-commit` job (`pre-commit/action`) mirroring local hooks; hooks add `check-toml` and `mixed-line-ending`
+- Progressive mypy surface: CLI, converter, normalizer, reverse, plugin loader, xrefs, MCP path jail, full `render/` package
+- Ruff: enable `B` (bugbear) and `RUF100` (stale noqa); `DocxDocument` typing for python-docx APIs
+- Mypy: full `parse/` package (markdown-it attr coercion, callout/table narrowing)
+- Dependabot npm updates for `editors/vscode`
+- Release workflow runs pre-commit and mypy before tests (same gates as tag checklist)
+- `scripts/ci_local.sh` — one command for pre-commit, mypy, and coverage pytest (optional `--integration`, `--audit`)
+- Mypy: MCP `handlers` + `server` (TypedDict tool schemas, `input_schema` kwarg)
+- Pre-commit Ruff scoped to `scripts/md_to_docx` and `tests` (same as CI)
+- `ci_local.sh`: `--extension`, `--mermaid`, `--matrix`, `--all` (full CI parity); fix `--cov-report` quoting
+- Mypy: entire `plugin/` and `transform/` packages (~38 modules)
 
 ### Fixed
 
+- `converter.die()` annotated as `NoReturn` so directory scans type-check under mypy
 - Agensi listing GitHub URL aligned with the canonical `sunliang11/md-to-docx` repo
 - Minor dead assignments / import hygiene caught by Ruff
 - `convert()` mypy arg-type when `source` is narrowed after the missing-input guard
