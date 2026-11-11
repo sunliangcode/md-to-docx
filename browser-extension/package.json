@@ -8,9 +8,9 @@
     "postinstall": "npm run vendor:turndown"
   },
   "dependencies": {
-    "turndown": "^7.2.4"
+    "turndown": "^7.2.5"
   },
   "devDependencies": {
-    "jsdom": "^24.0.0"
+    "jsdom": "^31.0.0"
   }
 }
